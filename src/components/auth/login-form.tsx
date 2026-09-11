@@ -62,6 +62,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
+          className="h-11 rounded-full px-4"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -72,13 +73,14 @@ export function LoginForm() {
           id="password"
           type="password"
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          className="h-11 rounded-full px-4"
           minLength={8}
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
       </div>
-      <Button type="submit" className="w-full bg-[#fe2f55] text-white hover:bg-[#fe2f55]/90" disabled={pending}>
+      <Button type="submit" className="h-11 w-full rounded-full bg-[#4f8637] text-white hover:bg-[#3f6b2b]" disabled={pending}>
         {pending ? "Even geduld…" : mode === "login" ? "Inloggen" : "Account maken"}
       </Button>
       <button

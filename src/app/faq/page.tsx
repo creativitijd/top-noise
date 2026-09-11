@@ -47,7 +47,7 @@ export default function FaqPage() {
       <h3>Nog vragen?</h3>
       <p>
         Mail ons op{" "}
-        <a className="text-[#03fce8] hover:underline" href="mailto:info@top-noise.com">
+        <a className="font-semibold text-[#3f6b2b] hover:underline" href="mailto:info@top-noise.com">
           info@top-noise.com
         </a>
         .

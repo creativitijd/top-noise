@@ -28,7 +28,7 @@ export default async function ChannelsPage({
     .eq("project_id", project.id);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-8">
+    <main className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-6">
       <ChannelManager projectId={project.id} channels={(channels ?? []) as ChannelPublic[]} />
     </main>
   );

@@ -57,7 +57,7 @@ export default function PrivacyPage() {
       <h2>7. Je rechten (AVG)</h2>
       <p>
         Je hebt recht op inzage, rectificatie, verwijdering, bezwaar en dataportabiliteit. Mail{" "}
-        <a className="text-[#03fce8] hover:underline" href="mailto:info@top-noise.com">
+        <a className="font-semibold text-[#3f6b2b] hover:underline" href="mailto:info@top-noise.com">
           info@top-noise.com
         </a>
         .
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
       <h2>10. Contact</h2>
       <p>
         E-mail:{" "}
-        <a className="text-[#03fce8] hover:underline" href="mailto:info@top-noise.com">
+        <a className="font-semibold text-[#3f6b2b] hover:underline" href="mailto:info@top-noise.com">
           info@top-noise.com
         </a>
       </p>

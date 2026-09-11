@@ -49,6 +49,9 @@ export type Project = {
   goals: string | null;
   visual_guidelines: string | null;
   timezone: string;
+  brand_analysis: Json | null;
+  stylebook_path: string | null;
+  stylebook_url: string | null;
   created_at: string;
   updated_at: string;
 };

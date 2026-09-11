@@ -23,6 +23,7 @@ export function buildSystemPrompt(input: {
   targetAudience?: string | null;
   goals?: string | null;
   visualGuidelines?: string | null;
+  brandAnalysis?: string | null;
   pillars: { name: string; description: string | null }[];
   websiteSummary?: string | null;
 }): string {
@@ -38,6 +39,7 @@ export function buildSystemPrompt(input: {
     input.targetAudience ? `Doelgroep: ${input.targetAudience}` : null,
     input.goals ? `Doelen: ${input.goals}` : null,
     input.visualGuidelines ? `Visuele richtlijnen: ${input.visualGuidelines}` : null,
+    input.brandAnalysis ? `Merkanalyse:\n${input.brandAnalysis}` : null,
     `Contentpijlers: ${pillars}`,
     input.websiteSummary ? `Websitecontext: ${input.websiteSummary}` : null,
   ]

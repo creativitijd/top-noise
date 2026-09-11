@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuth, assertProjectAccess } from "@/lib/auth/session";
 import { generateJsonContent } from "@/lib/ai/generate";
+import { formatStoredAnalysis } from "@/lib/ai/brand-analysis";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { isPlatform, type Platform } from "@/lib/platforms";
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
         targetAudience: project.target_audience,
         goals: project.goals,
         visualGuidelines: project.visual_guidelines,
+        brandAnalysis: formatStoredAnalysis(project.brand_analysis),
         pillars: pillars ?? [],
         websiteSummary: project.website_url,
       }),

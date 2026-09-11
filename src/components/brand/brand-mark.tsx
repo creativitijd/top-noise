@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function BrandMark({
   href = "/",
-  size = 40,
+  size = 32,
   light = false,
 }: {
   href?: string;
@@ -12,15 +12,21 @@ export function BrandMark({
 }) {
   return (
     <Link href={href} className="flex items-center gap-2.5">
-      <Image
-        src="/logo.jpg"
-        alt="Top Noise"
-        width={size}
-        height={size}
-        className="rounded-md object-contain"
-        priority
-      />
-      <span className={`text-xl font-black tracking-tight ${light ? "text-white" : "text-foreground"}`}>
+      <span className="flex size-8 items-center justify-center overflow-hidden rounded-[10px] border border-[rgb(31_27_24_/_8%)] bg-white">
+        <Image
+          src="/logo.jpg"
+          alt="Top Noise"
+          width={size}
+          height={size}
+          className="size-7 object-cover mix-blend-multiply"
+          priority
+        />
+      </span>
+      <span
+        className={`font-[family-name:var(--font-heading)] text-[19px] font-bold tracking-[-0.03em] ${
+          light ? "text-white" : "text-foreground"
+        }`}
+      >
         Top Noise
       </span>
     </Link>

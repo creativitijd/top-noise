@@ -1,22 +1,27 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const sans = Inter({
+const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
 });
 
+const heading = Bricolage_Grotesque({
+  variable: "--font-heading",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Top Noise - AI-Powered Social Media op Autopilot",
+  title: "Top Noise - Een maand social media, in één middag geregeld",
   description:
-    "Genereer maandplannen, creëer platform-specifieke content en publiceer automatisch. Social media op autopilot met AI.",
+    "Top Noise maakt je maandplan, schrijft de posts per platform en zet ze zelf online. Jij kijkt het na met een koffie erbij.",
   keywords: [
     "social media planning",
-    "content calendar",
-    "AI content generation",
+    "contentkalender",
+    "AI content",
     "Facebook",
     "Instagram",
     "LinkedIn",
@@ -27,9 +32,9 @@ export const metadata: Metadata = {
     apple: "/logo.jpg",
   },
   openGraph: {
-    title: "Top Noise - Social Media op Autopilot",
+    title: "Top Noise - Een maand social media, in één middag geregeld",
     description:
-      "Genereer maandplannen, creëer platform-specifieke content en publiceer automatisch.",
+      "Maandplan, posts per platform en automatisch publiceren. Geen kaart nodig.",
     type: "website",
     url: "https://top-noise.com",
   },
@@ -37,10 +42,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="nl"
-      className={`${sans.variable} h-full antialiased`}
-    >
+    <html lang="nl" className={`${sans.variable} ${heading.variable} h-full`}>
       <body className={`${sans.className} flex min-h-full flex-col bg-background text-foreground`}>
         <TooltipProvider>
           {children}

@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
-import { AppHeader } from "@/components/layout/app-header";
-import { buttonVariants } from "@/components/ui/button";
+import { AppShell, ProjectSidebar } from "@/components/layout/app-shell";
 import { getAuth } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -18,43 +18,56 @@ export default async function ProjectsPage() {
     .select("*")
     .order("updated_at", { ascending: false });
 
+  const list = projects ?? [];
+
   return (
-    <>
-      <AppHeader
-        title="Projecten"
-        subtitle="Elk merk of product krijgt een eigen stem, kalender en kanalen."
-        actions={
-          <Link href="/projects/new" className={buttonVariants()}>
-            <Plus data-icon="inline-start" />
+    <AppShell
+      sidebar={
+        <Suspense fallback={<aside className="min-h-[calc(100vh-44px)] rounded-3xl bg-[#1f1b18]" />}>
+          <ProjectSidebar projects={list.map(({ name, slug, industry }) => ({ name, slug, industry }))} />
+        </Suspense>
+      }
+    >
+      <main className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white px-6 py-5">
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-[-0.035em]">Projecten</h1>
+            <p className="mt-1 text-sm text-[#635a52]">Elk merk of product krijgt een eigen stem, kalender en kanalen.</p>
+          </div>
+          <Link
+            href="/projects/new"
+            className="inline-flex items-center gap-2 rounded-full bg-[#4f8637] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3f6b2b]"
+          >
+            <Plus className="size-4" />
             Nieuw project
           </Link>
-        }
-      />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
-        {!projects || projects.length === 0 ? (
-          <div className="rounded-2xl bg-card p-10 text-center ring-1 ring-foreground/10">
-            <h2 className="text-2xl">Nog geen merken</h2>
-            <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-              Begin met het project dat je nu wilt laten groeien. Stem, pijlers en kanalen volgen in een
-              korte onboarding.
+        </div>
+        {list.length === 0 ? (
+          <div className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-[-0.03em]">Nog geen merken</h2>
+            <p className="mx-auto mt-2 max-w-md text-[#635a52]">
+              Begin met het project dat je nu wilt laten groeien. Stem, pijlers en kanalen volgen in een korte onboarding.
             </p>
-            <Link href="/projects/new" className={`${buttonVariants()} mt-6`}>
+            <Link
+              href="/projects/new"
+              className="mt-6 inline-flex rounded-full bg-[#4f8637] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#3f6b2b]"
+            >
               Eerste project aanmaken
             </Link>
           </div>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
-            {projects.map((project) => (
+            {list.map((project) => (
               <li key={project.id}>
                 <Link
                   href={`/projects/${project.slug}`}
-                  className="block rounded-2xl bg-card p-5 ring-1 ring-foreground/10 transition-colors hover:bg-muted/40"
+                  className="block rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5 transition-colors hover:bg-[#f1f6e7]"
                 >
-                  <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-wide text-[#8b8079] uppercase">
                     {project.industry || "Merk"}
                   </p>
-                  <h2 className="mt-1 text-2xl">{project.name}</h2>
-                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">{project.name}</h2>
+                  <p className="mt-2 line-clamp-2 text-sm text-[#635a52]">
                     {project.tone_of_voice || "Nog geen toon vastgelegd."}
                   </p>
                 </Link>
@@ -63,6 +76,6 @@ export default async function ProjectsPage() {
           </ul>
         )}
       </main>
-    </>
+    </AppShell>
   );
 }

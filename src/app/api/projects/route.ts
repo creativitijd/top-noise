@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuth, assertProjectAccess } from "@/lib/auth/session";
+import { brandAnalysisSchema } from "@/lib/ai/brand-analysis";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { uniqueSlug } from "@/lib/slug";
 import { DEFAULT_TIMEZONE } from "@/lib/dates";
@@ -13,6 +14,7 @@ const createSchema = z.object({
   targetAudience: z.string().optional(),
   goals: z.string().optional(),
   visualGuidelines: z.string().optional(),
+  brandAnalysis: brandAnalysisSchema.optional(),
   timezone: z.string().optional(),
   pillars: z
     .array(
@@ -48,6 +50,7 @@ export async function POST(request: Request) {
         target_audience: body.targetAudience || null,
         goals: body.goals || null,
         visual_guidelines: body.visualGuidelines || null,
+        brand_analysis: body.brandAnalysis ?? null,
         timezone: body.timezone || DEFAULT_TIMEZONE,
       })
       .select("*")
@@ -95,6 +98,7 @@ export async function PATCH(request: Request) {
         target_audience: body.targetAudience,
         goals: body.goals,
         visual_guidelines: body.visualGuidelines,
+        brand_analysis: body.brandAnalysis,
         timezone: body.timezone,
       })
       .eq("id", body.id)

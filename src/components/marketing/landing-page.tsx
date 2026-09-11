@@ -3,523 +3,436 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BarChart3, Calendar, CheckCircle2, Clock, Image as ImageIcon, Menu, Rocket, Shield, Sparkles, Target, X } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import {
+  ArrowRight,
+  BarChart3,
+  Calendar,
+  Check,
+  Clock,
+  ImageIcon,
+  Menu,
+  Mic,
+  Pencil,
+  X,
+} from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { cn } from "@/lib/utils";
 
-const features = [
+const faqs = [
   {
-    title: "AI Content Generatie",
-    description: "Laat AI unieke posts schrijven die passen bij jouw merk, tone of voice en doelgroep",
-    icon: Sparkles,
-    accent: false,
+    q: "Moet ik zelf nog iets schrijven?",
+    a: "Nee. Je krijgt volledige posts, klaar om te publiceren. Aanpassen kan altijd. De meeste mensen veranderen alleen een paar woorden.",
   },
   {
-    title: "Multi-Platform",
-    description: "Facebook, Instagram en LinkedIn — allemaal geoptimaliseerd per platform met juiste formatting",
-    icon: Target,
-    accent: true,
+    q: "Klinkt het niet als generieke AI-tekst?",
+    a: "Top Noise leest je bestaande posts en leert daar je stem uit. Hoe meer je goedkeurt of herschrijft, hoe dichter het erbij komt.",
   },
   {
-    title: "Automatisch Plannen",
-    description: "Volledige maandplannen in seconden, afgestemd op jouw strategie en content pillars",
-    icon: Clock,
-    accent: false,
+    q: "Hoeveel tijd kost het me per maand?",
+    a: "Reken op een halfuur tot een uur om je plan na te kijken en goed te keuren. Daarna loopt de maand vanzelf door.",
   },
   {
-    title: "Direct Publiceren",
-    description: "Keur posts goed en publiceer direct naar al je verbonden social media accounts",
-    icon: Rocket,
-    accent: true,
+    q: "Kan ik met meerdere mensen werken?",
+    a: "Ja. Nodig collega's of je klant uit om mee te kijken en goed te keuren voor er iets online staat.",
   },
   {
-    title: "Contentkalender",
-    description: "Overzichtelijke kalender met alle geplande posts en eenvoudig beheer",
-    icon: Calendar,
-    accent: false,
-  },
-  {
-    title: "Visual Briefs",
-    description: "AI genereert gedetailleerde visual briefs voor je grafisch ontwerpers",
-    icon: ImageIcon,
-    accent: true,
-  },
-  {
-    title: "Content Pillars",
-    description: "Definieer je content thema's en laat AI daar consistent posts over maken",
-    icon: BarChart3,
-    accent: false,
-  },
-  {
-    title: "Brand Consistency",
-    description: "Alle content blijft consistent met jouw merk, tone of voice en huisstijl",
-    icon: Shield,
-    accent: true,
-  },
-];
-
-const steps = [
-  {
-    title: "Verbind je accounts",
-    description: "Koppel je Facebook, Instagram en LinkedIn accounts in één klik. Veilig en eenvoudig via OAuth.",
-  },
-  {
-    title: "Configureer je merk",
-    description: "Vertel ons over je bedrijf, doelgroep en tone of voice. AI leert jouw unieke merk kennen.",
-  },
-  {
-    title: "Laat AI plannen en creëren",
-    description: "AI creëert een complete maandkalender met perfecte timing en platform-specifieke content.",
-  },
-  {
-    title: "Review en publiceer",
-    description: "Bekijk je posts, pas aan indien nodig, en publiceer automatisch naar al je kanalen.",
-  },
-];
-
-const plans = [
-  {
-    name: "Starter",
-    price: "€0",
-    credits: "30 credits",
-    note: "Gratis bij aanmelding",
-    items: ["30 AI posts", "Alle platforms", "Visual briefs", "Contentkalender"],
-    popular: false,
-  },
-  {
-    name: "Small",
-    price: "€49",
-    credits: "50 credits",
-    note: "€0,98 per credit",
-    items: ["50 AI posts", "Alle platforms", "Visual briefs", "Priority support"],
-    popular: false,
-  },
-  {
-    name: "Medium",
-    price: "€149",
-    credits: "350 credits",
-    note: "€0,43 per credit · Bespaar 56%",
-    items: ["350 AI posts", "Alle platforms", "Visual briefs", "Priority support"],
-    popular: true,
-  },
-  {
-    name: "Large",
-    price: "€349",
-    credits: "1000 credits",
-    note: "€0,35 per credit · Bespaar 64%",
-    items: ["1000 AI posts", "Alle platforms", "Visual briefs", "Dedicated support"],
-    popular: false,
-  },
-];
-
-const testimonials = [
-  {
-    quote:
-      "Top Noise heeft onze social media volledig getransformeerd. We besparen 5+ uur per week en krijgen meer engagement dan ooit.",
-    name: "Sarah de Vries",
-    role: "Marketing Manager bij TechStart",
-    image: "/brand/testimonial-1.jpg",
-  },
-  {
-    quote: "Eindelijk een tool die begrijpt wat ons merk nodig heeft. De AI schrijft posts die echt bij ons passen.",
-    name: "Mark Jansen",
-    role: "Founder ZelfstandigePlus",
-    image: "/brand/testimonial-2.jpg",
-  },
-  {
-    quote: "Van 0 naar 50 posts per maand. Onze online zichtbaarheid is geëxplodeerd sinds we Top Noise gebruiken.",
-    name: "Lisa van den Berg",
-    role: "Owner CreativeStudio",
-    image: "/brand/testimonial-3.jpg",
+    q: "Wat als ik wil stoppen?",
+    a: "Maandelijks opzegbaar, zonder belletje met een accountmanager. Je content en kalender neem je mee.",
   },
 ];
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#010001] font-sans text-white [&_h1]:font-sans [&_h2]:font-sans [&_h3]:font-sans [&_h4]:font-sans">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-1/4 -left-1/4 h-1/2 w-1/2 rounded-full bg-[#fe2f55]/20 blur-[120px]" />
-        <div className="absolute right-[-10%] bottom-1/4 h-1/2 w-1/2 rounded-full bg-[#03fce8]/20 blur-[120px]" />
-      </div>
-
-      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#010001]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <BrandMark light />
-          <div className="hidden items-center gap-3 md:flex">
-            <Link
-              href="/login"
-              className={cn(buttonVariants({ variant: "ghost" }), "text-white/80 hover:bg-white/10 hover:text-white")}
-            >
+    <div className="overflow-x-hidden bg-[#f5f5f4] text-[#1f1b18]">
+      <div className="sticky top-0 z-50 px-4 py-3.5">
+        <header className="mx-auto flex max-w-[1180px] items-center gap-6 rounded-full border border-[rgb(31_27_24_/_7%)] bg-white/85 px-4 py-2.5 shadow-[0_6px_24px_rgb(31_27_24_/_6%)] backdrop-blur-md">
+          <BrandMark />
+          <nav className="ml-auto hidden items-center gap-1 text-[14.5px] font-medium md:flex">
+            <a href="#hoe" className="rounded-full px-3 py-2 text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)] hover:text-[#1f1b18]">
+              Hoe het werkt
+            </a>
+            <a href="#features" className="rounded-full px-3 py-2 text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)] hover:text-[#1f1b18]">
+              Features
+            </a>
+            <a href="#platformen" className="rounded-full px-3 py-2 text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)] hover:text-[#1f1b18]">
+              Platformen
+            </a>
+            <a href="#faq" className="rounded-full px-3 py-2 text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)] hover:text-[#1f1b18]">
+              FAQ
+            </a>
+          </nav>
+          <div className="hidden items-center gap-1.5 md:flex">
+            <Link href="/login" className="rounded-full px-3.5 py-2 text-[14.5px] font-semibold text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)]">
               Inloggen
             </Link>
             <Link
               href="/login?tab=signup"
-              className={cn(buttonVariants(), "bg-[#fe2f55] text-white hover:bg-[#fe2f55]/90")}
+              className="rounded-full bg-[#1f1b18] px-5 py-2.5 text-[14.5px] font-semibold text-white hover:bg-[#3a1f1b]"
             >
-              Gratis Starten
+              Gratis proberen
             </Link>
           </div>
           <button
             type="button"
-            className="rounded-lg p-2 text-white md:hidden"
+            className="ml-auto rounded-full p-2 md:hidden"
             onClick={() => setMenuOpen((open) => !open)}
             aria-label="Menu"
           >
             {menuOpen ? <X /> : <Menu />}
           </button>
-        </div>
+        </header>
         {menuOpen ? (
-          <div className="space-y-2 border-t border-white/10 px-4 py-4 md:hidden">
-            <Link href="/login" className="block rounded-lg px-3 py-2 text-white/80 hover:bg-white/5">
-              Inloggen
-            </Link>
-            <Link href="/login?tab=signup" className={cn(buttonVariants(), "w-full bg-[#fe2f55] text-white")}>
-              Gratis Starten
+          <div className="mx-auto mt-2 max-w-[1180px] space-y-1 rounded-3xl bg-white p-4 shadow-lg md:hidden">
+            <a href="#hoe" className="block rounded-xl px-3 py-2">Hoe het werkt</a>
+            <a href="#features" className="block rounded-xl px-3 py-2">Features</a>
+            <Link href="/login" className="block rounded-xl px-3 py-2">Inloggen</Link>
+            <Link href="/login?tab=signup" className="block rounded-full bg-[#1f1b18] px-4 py-3 text-center text-white">
+              Gratis proberen
             </Link>
           </div>
         ) : null}
-      </nav>
+      </div>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-20 pb-28 text-center md:pt-28">
-        <h1 className="text-6xl font-black tracking-tighter md:text-[8rem] md:leading-[0.9]">
-          <span className="block">Social Media</span>
-          <span className="mt-2 block bg-gradient-to-r from-[#03fce8] via-[#7ec8c0] to-[#fe2f55] bg-clip-text text-transparent">
-            op Autopilot
-          </span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-3xl text-lg text-white/60 md:text-2xl">
-          Laat AI je contentkalender vullen, perfecte posts genereren en automatisch publiceren op Facebook,
-          Instagram en LinkedIn. <span className="font-semibold text-[#03fce8]">10x sneller</span>, altijd
-          on-brand.
-        </p>
-        <div className="mt-8 flex justify-center">
-          <Link
-            href="/login?tab=signup"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "h-12 rounded-xl bg-[#fe2f55] px-8 text-base text-white shadow-[0_0_40px_rgba(254,47,85,0.45)] hover:bg-[#fe2f55]/90"
-            )}
-          >
-            Start met 30 Credits Gratis
-            <ArrowRight data-icon="inline-end" />
-          </Link>
-        </div>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-sm text-white/50">
-          {["Geen creditcard", "30 gratis credits", "Setup in 2 min", "Direct te gebruiken"].map((item) => (
-            <span key={item} className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-[#03fce8]" />
-              {item}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2">
-        <div>
-          <h2 className="text-4xl font-bold md:text-5xl">
-            Sluit aan bij <span className="text-[#03fce8]">500+</span> bedrijven
-          </h2>
-          <p className="mt-4 text-lg text-white/70">
-            Die hun social media marketing al hebben geautomatiseerd met Top Noise. Van zelfstandigen tot
-            marketingteams — iedereen bespaart tijd en verhoogt engagement.
-          </p>
-          <Link
-            href="/login?tab=signup"
-            className={cn(buttonVariants({ size: "lg" }), "mt-6 bg-[#fe2f55] text-white hover:bg-[#fe2f55]/90")}
-          >
-            Start Nu Gratis
-          </Link>
-        </div>
-        <div className="relative">
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#fe2f55]/30 to-[#03fce8]/30 blur-2xl" />
-          <Image
-            src="/brand/diverse-team.jpg"
-            alt="Team werkt samen aan social media"
-            width={900}
-            height={600}
-            className="relative w-full rounded-3xl object-cover shadow-2xl"
-          />
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto grid max-w-5xl gap-6 px-4 py-16 md:grid-cols-3">
-        {[
-          { value: "500+", label: "Tevreden gebruikers" },
-          { value: "10K+", label: "Posts gegenereerd" },
-          { value: "95%", label: "Tijd bespaard" },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center">
-            <p className="bg-gradient-to-r from-[#fe2f55] to-[#03fce8] bg-clip-text text-6xl font-black text-transparent">
-              {stat.value}
+      <section className="relative">
+        <div className="pointer-events-none absolute top-[-180px] left-1/2 h-[520px] w-[1100px] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(196,222,160,.5),rgba(245,245,244,0)_70%)]" />
+        <div className="relative mx-auto max-w-[1180px] px-6 pt-14">
+          <div className="max-w-[900px]">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[rgb(31_27_24_/_8%)] bg-white py-1.5 pr-4 pl-2">
+              <span className="flex gap-0.5">
+                <span className="block size-1.5 rounded-[2px] bg-[#f4243f]" />
+                <span className="block size-1.5 rounded-[2px] bg-[#0fd8ce]" />
+              </span>
+              <span className="text-[13px] font-semibold text-[#3f6b2b]">Nieuw: automatisch publiceren op LinkedIn</span>
+            </div>
+            <h1 className="mb-5 text-balance text-[clamp(44px,7vw,88px)] leading-[0.96] font-semibold tracking-[-0.045em]">
+              Een maand social media, in één middag geregeld.
+              <span className="mb-[0.42em] ml-3 inline-block size-3 animate-[tn-blink_4.5s_ease-in-out_infinite] rounded-full bg-[#f4243f] align-middle" />
+            </h1>
+            <p className="mb-8 max-w-[52ch] text-[19px] text-[#635a52]">
+              Top Noise maakt je maandplan, schrijft de posts per platform en zet ze zelf online. Jij kijkt het na
+              met een koffie erbij.
             </p>
-            <p className="mt-3 text-lg text-white/70">{stat.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="relative z-10 px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-16 text-center">
-            <h2 className="text-4xl font-bold md:text-6xl">
-              Alles wat je <span className="text-[#fe2f55]">nodig hebt</span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-white/60">
-              Van inspiratie tot publicatie, volledig geautomatiseerd met kunstmatige intelligentie
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div key={feature.title} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                  <div
-                    className={`mb-5 flex size-14 items-center justify-center rounded-2xl ${
-                      feature.accent ? "bg-[#03fce8] text-[#010001]" : "bg-[#fe2f55] text-white"
-                    }`}
-                  >
-                    <Icon className="size-7" />
-                  </div>
-                  <h3 className="text-lg font-bold">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/60">{feature.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto grid max-w-5xl gap-6 px-4 py-8 md:grid-cols-3">
-        {[
-          { value: "10x", label: "Sneller content maken" },
-          { value: "3+", label: "Platforms ondersteund" },
-          { value: "95%", label: "Tijd bespaard" },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-            <p className="bg-gradient-to-r from-[#fe2f55] to-[#03fce8] bg-clip-text text-5xl font-black text-transparent">
-              {stat.value}
-            </p>
-            <p className="mt-3 text-lg text-white/70">{stat.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 md:grid-cols-2">
-        <Image
-          src="/brand/team-collaboration.jpg"
-          alt="Samenwerken aan een contentstrategie"
-          width={900}
-          height={700}
-          className="w-full rounded-2xl object-cover shadow-2xl"
-        />
-        <div>
-          <h2 className="text-4xl font-bold md:text-5xl">
-            Zo <span className="text-[#03fce8]">werkt het</span>
-          </h2>
-          <p className="mt-3 text-white/60">In 4 simpele stappen naar consistente social media marketing</p>
-          <ol className="mt-8 space-y-6">
-            {steps.map((step, index) => (
-              <li key={step.title} className="flex gap-4">
-                <span
-                  className={`flex size-12 shrink-0 items-center justify-center rounded-2xl text-xl font-bold ${
-                    index % 2 === 0 ? "bg-[#fe2f55] text-white" : "bg-[#03fce8] text-[#010001]"
-                  }`}
-                >
-                  {index + 1}
-                </span>
-                <div>
-                  <h3 className="text-xl font-bold">{step.title}</h3>
-                  <p className="mt-1 text-white/60">{step.description}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      <section className="relative z-10 px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-4xl font-black md:text-5xl">Simpele, transparante prijzen</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-white/70">
-              Koop alleen credits wanneer je ze nodig hebt. Geen verplichtingen, geen verborgen kosten.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`flex flex-col border bg-[#010001] p-7 ${
-                  plan.popular ? "border-[#fe2f55]" : "border-white/10"
-                }`}
+            <div className="mb-4 flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/login?tab=signup"
+                className="inline-flex items-center gap-2.5 rounded-full bg-[#4f8637] px-6 py-4 text-[16.5px] font-semibold text-white hover:bg-[#3f6b2b]"
               >
-                {plan.popular ? (
-                  <p className="-mt-10 mb-4 self-center bg-[#fe2f55] px-3 py-1 text-xs font-bold">POPULAIR</p>
-                ) : null}
-                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                <p className="mt-3 text-5xl font-black">{plan.price}</p>
-                <p className="mt-3 font-semibold text-white/70">{plan.credits}</p>
-                <p className="text-sm text-white/50">{plan.note}</p>
-                <ul className="mt-6 flex-1 space-y-2 text-sm text-white/70">
-                  {plan.items.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#03fce8]" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/login?tab=signup"
-                  className={cn(buttonVariants(), "mt-6 w-full bg-[#fe2f55] text-white hover:bg-[#fe2f55]/90")}
-                >
-                  {plan.price === "€0" ? "Gratis starten" : "Koop nu"}
-                </Link>
+                14 dagen gratis proberen
+                <ArrowRight className="size-4" />
+              </Link>
+              <a
+                href="#hoe"
+                className="rounded-full border border-[rgb(31_27_24_/_16%)] px-6 py-4 text-[16.5px] font-semibold hover:bg-[rgb(31_27_24_/_4%)]"
+              >
+                Bekijk hoe het werkt
+              </a>
+            </div>
+            <p className="text-[13.5px] text-[#8b8079]">Geen kaart nodig · Eerste maandplan in 10 minuten · Opzeggen in twee klikken</p>
+          </div>
+
+          <div className="relative mt-12">
+            <span className="absolute top-[-24px] left-[-10px] z-10 inline-block rotate-[-6deg] rounded-full bg-[#c2572c] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_10px_20px_-10px_rgba(194,87,44,.9)]">
+              zo ziet je maand eruit
+            </span>
+            <div className="overflow-hidden rounded-[26px] border border-[rgb(31_27_24_/_8%)] bg-white shadow-[0_30px_70px_-30px_rgb(31_27_24_/_35%)]">
+              <div className="flex items-center gap-2 border-b border-[rgb(31_27_24_/_6%)] px-4 py-3.5">
+                <span className="size-2.5 rounded-full bg-[#e8ccc3]" />
+                <span className="size-2.5 rounded-full bg-[#ecdcba]" />
+                <span className="size-2.5 rounded-full bg-[#c9dcae]" />
+                <span className="ml-3 rounded-full bg-[rgb(31_27_24_/_5%)] px-3.5 py-1 text-[12.5px] font-medium text-[#8b8079]">
+                  app.top-noise.com/kalender
+                </span>
+              </div>
+              <Image
+                src="/brand/planner-preview.png"
+                alt="De Top Noise planner met de contentkalender"
+                width={1600}
+                height={1000}
+                className="h-auto w-full"
+                priority
+              />
+            </div>
+            <div className="absolute right-5 bottom-[-26px] flex animate-[tn-drift_5.5s_ease-in-out_infinite] items-center gap-2.5 rounded-[18px] border border-[rgb(31_27_24_/_8%)] bg-white py-2.5 pr-4 pl-3 shadow-[0_16px_34px_-14px_rgb(31_27_24_/_40%)]">
+              <span className="flex size-8 items-center justify-center rounded-[11px] bg-[#f1f6e7] text-[#4f8637]">
+                <Check className="size-4" />
+              </span>
+              <span className="text-[13px] leading-tight font-semibold">
+                Vrijdag 11:00
+                <br />
+                <span className="font-medium text-[#8b8079]">automatisch gepubliceerd</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-[1180px] px-6 pt-16">
+          <div className="grid overflow-hidden rounded-[22px] border border-[rgb(31_27_24_/_10%)] bg-[rgb(31_27_24_/_10%)] sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["6u", "bespaard per maand"],
+              ["30+", "posts per maandplan"],
+              ["3", "kanalen in één plan"],
+              ["10 min", "tot je eerste plan"],
+            ].map(([value, label]) => (
+              <div key={label} className="bg-white p-6">
+                <span className="block font-[family-name:var(--font-heading)] text-[30px] font-semibold tracking-[-0.04em]">
+                  {value}
+                </span>
+                <span className="text-[13.5px] font-medium text-[#8b8079]">{label}</span>
               </div>
             ))}
           </div>
-          <p className="mt-8 text-center text-white/50">
-            Alle pakketten zijn eenmalige aankopen. Credits verlopen niet en kunnen worden gebruikt wanneer je wilt.
-          </p>
-          <p className="mt-3 text-center text-sm text-white/40">
-            Checkout volgt; je kunt nu al een account aanmaken.
-          </p>
         </div>
       </section>
 
-      <section className="relative z-10 px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-4xl font-black md:text-5xl">Bereken jouw ROI winst</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-white/70">
-              Zie direct hoeveel tijd en geld je bespaart met Top Noise
-            </p>
-          </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-            <h3 className="text-2xl font-bold">Case Study: Lokale KMO</h3>
-            <p className="mt-2 text-white/60">
-              Een lokaal bedrijf met 10 medewerkers wil 2 posts per week publiceren op Facebook, Instagram en
-              LinkedIn
-            </p>
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-[#010001] p-6">
-                <h4 className="text-xl font-bold">Zonder Top Noise</h4>
-                <ul className="mt-4 space-y-2 text-sm text-white/70">
-                  <li className="flex justify-between gap-4">
-                    <span>Content bedenken</span>
-                    <span>2u/week</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>Posts schrijven (3 platforms)</span>
-                    <span>3u/week</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>Plannen &amp; publiceren</span>
-                    <span>1u/week</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>Grafisch ontwerp</span>
-                    <span>€150/maand</span>
-                  </li>
-                </ul>
-                <p className="mt-6 text-3xl font-black">24 uur + €150</p>
-                <p className="mt-2 text-sm text-white/50">Bij €50/uur = €1.200 + €150 = €1.350/maand</p>
+      <section id="hoe" className="mx-auto max-w-[1180px] px-6 py-24">
+        <span className="text-[13px] font-semibold tracking-[0.12em] text-[#b8562c] uppercase">Hoe het werkt</span>
+        <h2 className="mt-3 mb-11 max-w-[18ch] text-[clamp(32px,4vw,52px)] leading-[1.02] font-semibold tracking-[-0.04em]">
+          Drie stappen. De rest doet Top Noise.
+        </h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              n: "01",
+              title: "Vertel wat je doet",
+              text: "Je bedrijf, je toon, je doelgroep. Je vult het één keer in. Top Noise onthoudt het en bouwt er elke maand op verder.",
+              chip: "5 minuten",
+              wrap: "bg-[#f1f6e7] border-[#d9e7c2]",
+              iconWrap: "bg-[#4f8637] -rotate-[5deg]",
+              num: "text-[rgb(79_134_55_/_35%)]",
+              chipText: "text-[#3f6b2b]",
+              body: "text-[#4e5b3e]",
+              Icon: Mic,
+            },
+            {
+              n: "02",
+              title: "Krijg je maandplan",
+              text: "Een volle kalender met thema's, teksten en beeld per platform. Schuiven en herschrijven mag altijd.",
+              chip: "30+ posts",
+              wrap: "bg-[#fbf1e8] border-[#f0d6c2]",
+              iconWrap: "bg-[#c2572c] rotate-[4deg]",
+              num: "text-[rgb(194_87_44_/_32%)]",
+              chipText: "text-[#b8562c]",
+              body: "text-[#6b503f]",
+              Icon: Calendar,
+            },
+            {
+              n: "03",
+              title: "Goedkeuren en klaar",
+              text: "Eén klik en alles staat ingepland. Publiceren gebeurt vanzelf, op het moment dat je publiek wakker is.",
+              chip: "klaar voor de maand",
+              wrap: "bg-[#eceafb] border-[#d8d3f2]",
+              iconWrap: "bg-[#5b4fa8] -rotate-[3deg]",
+              num: "text-[rgb(91_79_168_/_30%)]",
+              chipText: "text-[#5b4fa8]",
+              body: "text-[#4f4870]",
+              Icon: Check,
+            },
+          ].map((step) => (
+            <div key={step.n} className={`relative overflow-hidden rounded-3xl border p-8 ${step.wrap}`}>
+              <span className="absolute top-[-30px] right-[-30px] size-[130px] rounded-full bg-white/55" />
+              <div className="relative mb-5 flex items-center gap-3">
+                <span className={`flex size-[52px] items-center justify-center rounded-[18px] text-white shadow-lg ${step.iconWrap}`}>
+                  <step.Icon className="size-6" />
+                </span>
+                <span className={`font-[family-name:var(--font-heading)] text-[40px] leading-none font-semibold tracking-[-0.05em] ${step.num}`}>
+                  {step.n}
+                </span>
               </div>
-              <div className="rounded-2xl border border-[#03fce8]/40 bg-[#010001] p-6">
-                <p className="mb-2 text-xs font-bold tracking-widest text-[#03fce8]">BESPARING</p>
-                <h4 className="text-xl font-bold">Met Top Noise</h4>
-                <ul className="mt-4 space-y-2 text-sm text-white/70">
-                  <li className="flex justify-between gap-4">
-                    <span>Posts reviewen &amp; aanpassen</span>
-                    <span>1u/week</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>AI genereert alles</span>
-                    <span>Automatisch</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>Visual briefs inbegrepen</span>
-                    <span>Gratis</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span>Top Noise (8 posts/maand)</span>
-                    <span>€49-149/maand</span>
-                  </li>
-                </ul>
-                <p className="mt-6 text-3xl font-black">4 uur + €49-149</p>
-                <p className="mt-2 text-sm text-white/50">Bij €50/uur = €200 + €149 = €349/maand</p>
-              </div>
+              <h3 className="relative mb-2.5 text-[25px] font-semibold tracking-[-0.035em]">{step.title}</h3>
+              <p className={`relative mb-4 text-base ${step.body}`}>{step.text}</p>
+              <span className={`relative inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12.5px] font-semibold ${step.chipText}`}>
+                <Clock className="size-3.5" />
+                {step.chip}
+              </span>
             </div>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              {[
-                { value: "83%", label: "Minder tijd nodig", note: "20 uur bespaard" },
-                { value: "€1.001", label: "Besparing per maand", note: "€12.012 per jaar" },
-                { value: "3x", label: "Meer output", note: "24+ posts/maand mogelijk" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/10 p-5 text-center">
-                  <p className="text-3xl font-black text-[#03fce8]">{item.value}</p>
-                  <p className="mt-1 font-semibold">{item.label}</p>
-                  <p className="text-sm text-white/50">{item.note}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-6xl px-4 py-20">
-        <h2 className="mb-10 text-center text-4xl font-bold">Wat gebruikers zeggen</h2>
-        <div className="grid gap-6 md:grid-cols-3">
-          {testimonials.map((item) => (
-            <figure key={item.name} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <p className="text-white/80">&ldquo;{item.quote}&rdquo;</p>
-              <figcaption className="mt-6 flex items-center gap-3">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  width={48}
-                  height={48}
-                  className="size-12 rounded-full object-cover"
-                />
-                <div>
-                  <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-white/50">{item.role}</p>
-                </div>
-              </figcaption>
-            </figure>
           ))}
         </div>
       </section>
 
-      <section className="relative z-10 px-4 py-24 text-center">
-        <h2 className="text-4xl font-black md:text-5xl">Klaar om te beginnen?</h2>
-        <p className="mx-auto mt-4 max-w-xl text-white/60">
-          Start vandaag nog met 30 gratis credits. Geen creditcard nodig, geen verplichtingen.
-        </p>
-        <Link
-          href="/login?tab=signup"
-          className={cn(buttonVariants({ size: "lg" }), "mt-8 h-12 bg-[#fe2f55] px-8 text-white hover:bg-[#fe2f55]/90")}
-        >
-          Start Nu Gratis
-        </Link>
+      <section id="features" className="mx-auto max-w-[1180px] px-6 pb-24">
+        <div className="mb-11 flex flex-wrap items-end justify-between gap-5">
+          <div className="max-w-[44ch]">
+            <span className="text-[13px] font-semibold tracking-[0.12em] text-[#3f6b2b] uppercase">Features</span>
+            <h2 className="mt-3 text-[clamp(32px,4vw,52px)] leading-[1.02] font-semibold tracking-[-0.04em]">
+              Alles wat je nu op vier tabbladen doet
+            </h2>
+          </div>
+          <Link href="/login?tab=signup" className="inline-flex items-center gap-2 text-[15.5px] font-semibold text-[#3f6b2b]">
+            Alle features bekijken
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "Maandplan in één klik",
+              text: "Top Noise verdeelt je thema's over de maand. Feestdagen, seizoen en je eigen acties zitten er al in.",
+              bg: "bg-[#f1f6e7] text-[#3f6b2b]",
+              Icon: Calendar,
+            },
+            {
+              title: "Per platform herschreven",
+              text: "Eén idee wordt drie posts: kort voor Instagram, losser voor Facebook, zakelijker voor LinkedIn.",
+              bg: "bg-[#fbf1e8] text-[#b8562c]",
+              Icon: Pencil,
+            },
+            {
+              title: "Jouw stem, niet die van AI",
+              text: "We leren je woordkeuze, lengte en humor. Herschrijf je iets? Dan leert het bij.",
+              bg: "bg-[#eceafb] text-[#5b4fa8]",
+              Icon: Mic,
+            },
+            {
+              title: "Automatisch publiceren",
+              text: "Goedgekeurde posts gaan zelf online, ook 's avonds. Mislukt er iets, dan hoor je het meteen.",
+              bg: "bg-[#e6eef9] text-[#3c5c85]",
+              Icon: Clock,
+            },
+            {
+              title: "Beeld erbij gezocht",
+              text: "Bij elke post een visual brief, en later beeld uit je bibliotheek of stock die bij je huisstijl past.",
+              bg: "bg-[#f5f3f0] text-[#8b6a4f]",
+              Icon: ImageIcon,
+            },
+            {
+              title: "Zie wat werkt",
+              text: "Per post bereik en reacties, per maand wat het beste scoorde. Daarvan plant Top Noise er daarna meer.",
+              bg: "bg-[#f1f6e7] text-[#3f6b2b]",
+              Icon: BarChart3,
+            },
+          ].map((feature) => (
+            <div key={feature.title} className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-[30px]">
+              <span className={`mb-5 flex size-11 items-center justify-center rounded-[14px] ${feature.bg}`}>
+                <feature.Icon className="size-[22px]" />
+              </span>
+              <h3 className="mb-2 text-xl font-semibold tracking-[-0.03em]">{feature.title}</h3>
+              <p className="text-[15.5px] text-[#635a52]">{feature.text}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <footer className="relative z-10 border-t border-white/10 px-4 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-white/50 md:flex-row">
-          <BrandMark light />
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/faq" className="hover:text-white">
-              FAQ
-            </Link>
-            <Link href="/privacy-policy" className="hover:text-white">
-              Privacy Policy
-            </Link>
-            <Link href="/policies" className="hover:text-white">
-              Voorwaarden
+      <section id="platformen" className="mx-auto max-w-[1180px] px-6 pb-24">
+        <div className="grid items-center gap-12 rounded-[28px] bg-[#1f1b18] px-8 py-14 text-white md:grid-cols-2 md:px-12">
+          <div>
+            <span className="text-[13px] font-semibold tracking-[0.12em] text-[#e9a878] uppercase">Platformen</span>
+            <h2 className="mt-3 mb-3.5 text-[clamp(30px,3.6vw,46px)] leading-[1.02] font-semibold tracking-[-0.04em] text-white">
+              Eén plan, drie kanalen
+            </h2>
+            <p className="mb-6 max-w-[38ch] text-[17px] text-white/70">
+              Koppel je accounts één keer. Top Noise past lengte, toon en hashtags aan per kanaal en publiceert
+              rechtstreeks vanuit de planner.
+            </p>
+            <Link
+              href="/login?tab=signup"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-base font-semibold text-[#1f1b18]"
+            >
+              Accounts koppelen
+              <ArrowRight className="size-4" />
             </Link>
           </div>
-          <p>© {new Date().getFullYear()} Top Noise. Alle rechten voorbehouden.</p>
+          <div className="grid gap-2.5">
+            {[
+              { mark: "f", name: "Facebook", sub: "Pagina's en events", bg: "bg-[#e6eef9]" },
+              { mark: "ig", name: "Instagram", sub: "Feed, carrousel en reels", bg: "bg-[#fbf1e8]" },
+              { mark: "in", name: "LinkedIn", sub: "Bedrijfspagina en persoonlijk", bg: "bg-[#f1f6e7]" },
+            ].map((item) => (
+              <div
+                key={item.name}
+                className="flex items-center gap-4 rounded-[18px] border border-white/10 bg-white/6 px-5 py-4"
+              >
+                <span className={`flex size-10 items-center justify-center rounded-[13px] text-[15px] font-bold text-[#1f1b18] ${item.bg}`}>
+                  {item.mark}
+                </span>
+                <span className="text-[16.5px] font-semibold">
+                  {item.name}
+                  <span className="block text-sm font-normal text-white/60">{item.sub}</span>
+                </span>
+                <span className="ml-auto text-xs font-semibold text-[#a9c98c]">Koppelen</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" className="mx-auto max-w-[1180px] px-6 pb-24">
+        <div className="grid gap-12 rounded-3xl border border-[rgb(31_27_24_/_8%)] bg-white px-8 py-10 md:grid-cols-[0.8fr_1.2fr] md:px-11">
+          <div>
+            <h2 className="mb-3.5 text-[clamp(30px,3.6vw,46px)] leading-[1.02] font-semibold tracking-[-0.04em]">
+              Veelgestelde vragen
+            </h2>
+            <p className="max-w-[30ch] text-[16.5px] text-[#635a52]">
+              Staat je vraag er niet bij?{" "}
+              <a href="mailto:info@top-noise.com" className="font-semibold text-[#3f6b2b]">
+                Mail ons
+              </a>
+              , je hebt dezelfde dag antwoord.
+            </p>
+          </div>
+          <div>
+            {faqs.map((item, index) => (
+              <div key={item.q} className={index === 0 ? "" : "border-t border-[rgb(31_27_24_/_12%)]"}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-4 py-5 text-left font-[family-name:var(--font-heading)] text-[19px] font-semibold tracking-[-0.02em]"
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                >
+                  {item.q}
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-[rgb(31_27_24_/_14%)] text-[17px] text-[#635a52]">
+                    {openFaq === index ? "–" : "+"}
+                  </span>
+                </button>
+                {openFaq === index ? <p className="max-w-[62ch] pb-6 text-base text-[#635a52]">{item.a}</p> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1180px] px-6 pb-24">
+        <div className="relative overflow-hidden rounded-[28px] bg-[#4f8637] px-8 py-[72px] text-center text-white md:px-11">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_120%,rgba(255,255,255,.22),transparent_55%),radial-gradient(circle_at_85%_-20%,rgba(255,255,255,.16),transparent_50%)]" />
+          <div className="relative">
+            <h2 className="mx-auto mb-4 max-w-[20ch] text-balance text-[clamp(34px,4.4vw,60px)] leading-none font-semibold tracking-[-0.04em] text-white">
+              Volgende maand staat al klaar.
+            </h2>
+            <span className="mb-4 inline-block rotate-2 rounded-full bg-white px-4 py-1.5 text-[13.5px] font-semibold text-[#3f6b2b]">
+              en die daarna ook
+            </span>
+            <p className="mx-auto mb-8 max-w-[44ch] text-lg text-white/80">
+              Veertien dagen gratis. Geen kaart, geen opzegtermijn, wel een volle kalender.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2.5">
+              <Link
+                href="/login?tab=signup"
+                className="rounded-full bg-[#1f1b18] px-7 py-4 text-[16.5px] font-semibold text-white hover:bg-black"
+              >
+                Gratis proberen
+              </Link>
+              <a
+                href="mailto:info@top-noise.com"
+                className="rounded-full border border-white/30 bg-white/14 px-6 py-4 text-[16.5px] font-semibold text-white hover:bg-white/22"
+              >
+                Liever eerst een demo
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-[rgb(31_27_24_/_10%)]">
+        <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-5 px-6 py-10">
+          <BrandMark />
+          <nav className="flex flex-wrap gap-6 text-[14.5px] font-medium text-[#635a52]">
+            <a href="#features">Features</a>
+            <Link href="/faq">FAQ</Link>
+            <a href="mailto:info@top-noise.com">Contact</a>
+            <Link href="/privacy-policy">Privacy</Link>
+            <Link href="/policies">Voorwaarden</Link>
+          </nav>
+          <span className="text-[13.5px] text-[#aaa09a]">© {new Date().getFullYear()} Top Noise</span>
         </div>
       </footer>
     </div>

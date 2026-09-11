@@ -95,7 +95,7 @@ export default async function AnalyticsPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+    <main className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-4">
         <Metric label="Weergaven" value={totals.impressions} />
         <Metric label="Likes" value={totals.likes} />

@@ -43,7 +43,7 @@ export default function PoliciesPage() {
       <h2>7. Contact</h2>
       <p>
         Vragen:{" "}
-        <a className="text-[#03fce8] hover:underline" href="mailto:info@top-noise.com">
+        <a className="font-semibold text-[#3f6b2b] hover:underline" href="mailto:info@top-noise.com">
           info@top-noise.com
         </a>
       </p>
