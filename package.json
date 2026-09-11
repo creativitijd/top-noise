@@ -1,11 +1,14 @@
 {
   "name": "promo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && node scripts/copy-standalone.mjs",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "eslint",
     "worker": "tsx --env-file=.env.local scripts/worker.ts"
   },

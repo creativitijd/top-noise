@@ -33,6 +33,24 @@ Geplande publicatie lokaal (naast `npm run dev`):
 npm run worker
 ```
 
+## GitHub + Sevalla
+
+Zelfde aanpak als Wensonweb: **Application Hosting** met de `Dockerfile` in de repo. Gebruik geen Static Site Hosting en geen Nixpacks.
+
+1. In Sevalla: **Settings → Build strategy → Dockerfile**.
+2. Environment variables zetten. Vink **build én runtime** aan voor `NEXT_PUBLIC_*`.
+3. Stel `PORT` niet handmatig in — Sevalla zet die zelf (meestal 8080).
+4. `NODE_ENV=production` wél zelf toevoegen.
+5. `APP_URL` = je Sevalla-URL (later het custom domain).
+6. Elke push naar `main` bouwt opnieuw.
+
+Als de proxy de app niet bereikt (`upstream connect error 111`): networking-poort laten matchen met `PORT`, en in de logs controleren of `node server.js` start.
+
+Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
+
+- `* * * * *` → `curl -sS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/publish"`
+- `15 3 * * *` → hetzelfde voor `/api/cron/analytics` (tijdzone Europe/Brussels)
+
 ## Versie
 
-0.1.0
+0.1.1
