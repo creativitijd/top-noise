@@ -1,6 +1,8 @@
-# Promo
+# Top Noise
 
-Commandocentrum voor merken: AI-content, kalender met goedkeuring, server-side publicatie en meetbare resultaten.
+AI-powered social media op autopilot: maandplannen, platform-specifieke content, goedkeuren en server-side publiceren — met meetbare resultaten.
+
+Live merk: [top-noise.com](https://top-noise.com/).
 
 ## Vereisten
 
@@ -53,4 +55,4 @@ Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
 
 ## Versie
 
-0.1.1
+0.2.0

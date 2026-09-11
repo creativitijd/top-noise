@@ -53,7 +53,7 @@ export const wordpressPublisher: Publisher = {
             headers: {
               Authorization: `Basic ${auth}`,
               "Content-Type": contentType,
-              "Content-Disposition": `attachment; filename="promo-${Date.now()}.${ext}"`,
+              "Content-Disposition": `attachment; filename="top-noise-${Date.now()}.${ext}"`,
             },
             body: await imageResponse.arrayBuffer(),
           });
