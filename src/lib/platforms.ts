@@ -48,3 +48,13 @@ export const POST_STATUS_LABELS: Record<PostStatus, string> = {
 export function isPlatform(value: string): value is Platform {
   return (PLATFORMS as readonly string[]).includes(value);
 }
+
+export const PLATFORM_CHAR_LIMITS: Record<Platform, number> = {
+  linkedin: 3000,
+  instagram: 2200,
+  facebook: 63206,
+  wordpress: 8000,
+};
+
+export const PLATFORM_ORDER: Platform[] = ["linkedin", "instagram", "facebook", "wordpress"];
+

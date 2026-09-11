@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { BrandAnalysis } from "@/lib/ai/brand-analysis";
+import { AudienceEditor, audiencesToSummary } from "@/components/projects/audience-editor";
+import { VoiceFields } from "@/components/projects/voice-fields";
 
 const defaultPillars = [
   { name: "Educatie", description: "Uitleg en inzichten uit de praktijk" },
@@ -47,7 +49,7 @@ export function ProjectOnboardingForm() {
       return;
     }
     if (!websiteUrl.trim() && !stylebook) {
-      toast.error("Voeg een website of stylboek toe.");
+      toast.error("Voeg een website of styleguide toe.");
       return;
     }
     setAnalyzing(true);
@@ -92,7 +94,7 @@ export function ProjectOnboardingForm() {
           pillars: pillars.filter((pillar) => pillar.name.trim()),
         }),
       });
-      const payload = (await response.json()) as { project?: { id: string; slug: string }; error?: string };
+      const payload = (await response.json()) as { project?: { id: string; slug: string }; error?: string; warning?: string };
       if (!response.ok || !payload.project) {
         throw new Error(payload.error ?? "Aanmaken mislukt.");
       }
@@ -103,10 +105,10 @@ export function ProjectOnboardingForm() {
         const upload = await fetch("/api/projects/stylebook", { method: "POST", body: form });
         if (!upload.ok) {
           const detail = (await upload.json()) as { error?: string };
-          throw new Error(detail.error ?? "Stylboek uploaden mislukt.");
+          throw new Error(detail.error ?? "Styleguide uploaden mislukt.");
         }
       }
-      toast.success("Project aangemaakt.");
+      toast.success(payload.warning ?? "Project aangemaakt.");
       router.push(`/projects/${payload.project.slug}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Aanmaken mislukt.");
@@ -134,7 +136,7 @@ export function ProjectOnboardingForm() {
           <Field label="Branche">
             <Input value={industry} onChange={(event) => setIndustry(event.target.value)} />
           </Field>
-          <Field label="Stylboek (PDF, PNG of JPG)">
+          <Field label="Styleguide (PDF, PNG of JPG)">
             <Input
               type="file"
               accept=".pdf,image/png,image/jpeg,image/webp"
@@ -143,7 +145,7 @@ export function ProjectOnboardingForm() {
             {stylebook ? <p className="text-sm text-muted-foreground">{stylebook.name}</p> : null}
           </Field>
           <p className="text-sm text-muted-foreground">
-            Laat AI website en stylboek analyseren. Je kunt het resultaat daarna nog aanpassen.
+            Laat AI website en styleguide analyseren. Je kunt het resultaat daarna nog aanpassen.
           </p>
           <Button type="button" disabled={analyzing || name.trim().length < 2} onClick={() => void runAnalysis()}>
             {analyzing ? "Analyseren…" : "Merk analyseren"}
@@ -160,14 +162,31 @@ export function ProjectOnboardingForm() {
               <p className="mt-1 text-muted-foreground">{analysis.positioning}</p>
             </div>
           ) : null}
+          <AudienceEditor
+            audiences={analysis?.audiences ?? []}
+            onChange={(audiences) => {
+              setAnalysis((current) => (current ? { ...current, audiences } : current));
+              setTargetAudience(audiencesToSummary(audiences, targetAudience));
+            }}
+          />
           <Field label="Toon van de stem">
             <Textarea
               value={toneOfVoice}
-              onChange={(event) => setToneOfVoice(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setToneOfVoice(value);
+                setAnalysis((current) => (current ? { ...current, toneOfVoice: value } : current));
+              }}
               placeholder="Warm, direct, zonder jargon…"
             />
           </Field>
-          <Field label="Doelgroep">
+          {analysis ? (
+            <VoiceFields
+              analysis={analysis}
+              onChange={(patch) => setAnalysis((current) => (current ? { ...current, ...patch } : current))}
+            />
+          ) : null}
+          <Field label="Doelgroep (samenvatting)">
             <Textarea
               value={targetAudience}
               onChange={(event) => setTargetAudience(event.target.value)}

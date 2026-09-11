@@ -6,6 +6,20 @@ import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { uniqueSlug } from "@/lib/slug";
 import { DEFAULT_TIMEZONE } from "@/lib/dates";
 
+const MIGRATION_HINT =
+  "Draai in Supabase → SQL Editor het bestand supabase/migrations/0002_brand_analysis.sql en klik daarna Run.";
+
+function missingBrandColumn(message: string | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("schema cache") &&
+    (lower.includes("brand_analysis") || lower.includes("stylebook_path") || lower.includes("stylebook_url"))
+  );
+}
+
 const createSchema = z.object({
   name: z.string().min(2),
   websiteUrl: z.string().url().optional().or(z.literal("")),
@@ -38,25 +52,38 @@ export async function POST(request: Request) {
       return jsonError(orgError?.message ?? "Workspace ontbreekt.", 500);
     }
 
-    const { data: project, error } = await auth.supabase
+    const core = {
+      organization_id: orgId,
+      name: body.name,
+      slug: uniqueSlug(body.name),
+      website_url: body.websiteUrl || null,
+      industry: body.industry || null,
+      tone_of_voice: body.toneOfVoice || null,
+      target_audience: body.targetAudience || null,
+      goals: body.goals || null,
+      visual_guidelines: body.visualGuidelines || null,
+      timezone: body.timezone || DEFAULT_TIMEZONE,
+    };
+
+    let { data: project, error } = await auth.supabase
       .from("projects")
-      .insert({
-        organization_id: orgId,
-        name: body.name,
-        slug: uniqueSlug(body.name),
-        website_url: body.websiteUrl || null,
-        industry: body.industry || null,
-        tone_of_voice: body.toneOfVoice || null,
-        target_audience: body.targetAudience || null,
-        goals: body.goals || null,
-        visual_guidelines: body.visualGuidelines || null,
-        brand_analysis: body.brandAnalysis ?? null,
-        timezone: body.timezone || DEFAULT_TIMEZONE,
-      })
+      .insert({ ...core, brand_analysis: body.brandAnalysis ?? null })
       .select("*")
       .single();
+
+    let warning: string | undefined;
+    if (error && missingBrandColumn(error.message)) {
+      const retry = await auth.supabase.from("projects").insert(core).select("*").single();
+      project = retry.data;
+      error = retry.error;
+      warning = `Merkprofiel opgeslagen, merkanalyse nog niet. ${MIGRATION_HINT}`;
+    }
+
     if (error || !project) {
-      return jsonError(error?.message ?? "Project aanmaken mislukt.", 500);
+      return jsonError(
+        missingBrandColumn(error?.message) ? MIGRATION_HINT : (error?.message ?? "Project aanmaken mislukt."),
+        500
+      );
     }
 
     if (body.pillars && body.pillars.length > 0) {
@@ -69,7 +96,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ project });
+    return NextResponse.json({ project, warning });
   } catch (error) {
     return handleRouteError(error);
   }
@@ -88,26 +115,41 @@ export async function PATCH(request: Request) {
     const body = await readJson(request, updateSchema);
     await assertProjectAccess(auth.supabase, body.id);
 
-    const { data: project, error } = await auth.supabase
+    const core = {
+      name: body.name,
+      website_url: body.websiteUrl,
+      industry: body.industry,
+      tone_of_voice: body.toneOfVoice,
+      target_audience: body.targetAudience,
+      goals: body.goals,
+      visual_guidelines: body.visualGuidelines,
+      timezone: body.timezone,
+    };
+    const payload =
+      body.brandAnalysis === undefined ? core : { ...core, brand_analysis: body.brandAnalysis };
+
+    let { data: project, error } = await auth.supabase
       .from("projects")
-      .update({
-        name: body.name,
-        website_url: body.websiteUrl,
-        industry: body.industry,
-        tone_of_voice: body.toneOfVoice,
-        target_audience: body.targetAudience,
-        goals: body.goals,
-        visual_guidelines: body.visualGuidelines,
-        brand_analysis: body.brandAnalysis,
-        timezone: body.timezone,
-      })
+      .update(payload)
       .eq("id", body.id)
       .select("*")
       .single();
-    if (error || !project) {
-      return jsonError(error?.message ?? "Bijwerken mislukt.", 500);
+
+    let warning: string | undefined;
+    if (error && missingBrandColumn(error.message)) {
+      const retry = await auth.supabase.from("projects").update(core).eq("id", body.id).select("*").single();
+      project = retry.data;
+      error = retry.error;
+      warning = `Merkprofiel opgeslagen, merkanalyse nog niet. ${MIGRATION_HINT}`;
     }
-    return NextResponse.json({ project });
+
+    if (error || !project) {
+      return jsonError(
+        missingBrandColumn(error?.message) ? MIGRATION_HINT : (error?.message ?? "Bijwerken mislukt."),
+        500
+      );
+    }
+    return NextResponse.json({ project, warning });
   } catch (error) {
     return handleRouteError(error);
   }

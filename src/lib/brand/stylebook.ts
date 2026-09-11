@@ -11,7 +11,7 @@ export type StylebookInput = {
 
 export async function parseStylebook(file: File): Promise<StylebookInput> {
   if (file.size > MAX_BYTES) {
-    throw new Error("Stylboek is groter dan 8 MB.");
+    throw new Error("Styleguide is groter dan 8 MB.");
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
@@ -23,13 +23,13 @@ export async function parseStylebook(file: File): Promise<StylebookInput> {
     if (!text.trim()) {
       throw new Error("Dit PDF-bestand bevat geen leesbare tekst. Upload ook een PNG of JPG van de kernpagina's.");
     }
-    return { text: `Stylboek (${file.name}):\n${text}`, images: [] };
+    return { text: `Styleguide (${file.name}):\n${text}`, images: [] };
   }
 
   if (IMAGE_TYPES.has(type)) {
     const base64 = Buffer.from(buffer).toString("base64");
     return {
-      text: `Stylboek-afbeelding: ${file.name}`,
+      text: `Styleguide-afbeelding: ${file.name}`,
       images: [{ type: "image_url", image_url: { url: `data:${type};base64,${base64}` } }],
     };
   }

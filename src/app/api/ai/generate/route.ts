@@ -4,6 +4,7 @@ import { getAuth, assertProjectAccess } from "@/lib/auth/session";
 import { generateJsonContent } from "@/lib/ai/generate";
 import { formatStoredAnalysis } from "@/lib/ai/brand-analysis";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
+import { voiceFromStored } from "@/lib/ai/voice";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { isPlatform, type Platform } from "@/lib/platforms";
 import { scheduledAtForDay } from "@/lib/dates";
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
         visualGuidelines: project.visual_guidelines,
         brandAnalysis: formatStoredAnalysis(project.brand_analysis),
         pillars: pillars ?? [],
-        websiteSummary: project.website_url,
+        voice: voiceFromStored(project.brand_analysis, project.tone_of_voice),
       }),
       userPrompt: buildUserPrompt({
         topic: body.topic,

@@ -1,5 +1,6 @@
 import { requiredEnv } from "@/lib/env";
 import { generatedContentSchema, type GeneratedContent } from "@/lib/ai/prompts";
+import { needsHumanizePass } from "@/lib/ai/voice";
 
 export type ChatContentPart =
   | { type: "text"; text: string }
@@ -13,9 +14,26 @@ export async function generateJsonContent(input: {
     systemPrompt: input.systemPrompt,
     userContent: input.userPrompt,
     model: process.env.AI_MODEL ?? "gpt-4o-mini",
-    temperature: 0.85,
+    temperature: 0.7,
   });
-  return generatedContentSchema.parse(parsed);
+  const first = generatedContentSchema.parse(parsed);
+  if (!needsHumanizePass(first)) {
+    return first;
+  }
+
+  try {
+    const second = await completeChatJson({
+      systemPrompt: `${input.systemPrompt}
+
+De vorige versie klinkt te veel als AI. Herschrijf alle platformteksten menselijker en dichter bij de voorbeeldzinnen van de website. Zelfde JSON-vorm. Geen clichés, geen gelijke zinslengte, geen em-dashes.`,
+      userContent: JSON.stringify(first),
+      model: process.env.AI_MODEL ?? "gpt-4o-mini",
+      temperature: 0.45,
+    });
+    return generatedContentSchema.parse(second);
+  } catch {
+    return first;
+  }
 }
 
 export async function completeChatJson(input: {

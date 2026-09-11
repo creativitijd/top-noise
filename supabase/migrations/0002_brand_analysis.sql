@@ -27,3 +27,5 @@ create policy stylebooks_authenticated_update
 create policy stylebooks_authenticated_delete
   on storage.objects for delete to authenticated
   using (bucket_id = 'stylebooks');
+
+notify pgrst, 'reload schema';

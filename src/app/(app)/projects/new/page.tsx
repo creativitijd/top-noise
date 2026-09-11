@@ -27,7 +27,7 @@ export default async function NewProjectPage() {
       <main className="max-w-2xl rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-6">
         <h1 className="text-[26px] font-semibold tracking-[-0.035em]">Nieuw project</h1>
         <p className="mt-1 mb-6 text-sm text-[#635a52]">
-          Analyseer website en stylboek, of vul het merkprofiel zelf in.
+          Analyseer website en styleguide, of vul het merkprofiel zelf in.
         </p>
         <ProjectOnboardingForm />
       </main>

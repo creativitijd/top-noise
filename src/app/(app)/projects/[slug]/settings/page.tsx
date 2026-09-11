@@ -25,7 +25,7 @@ export default async function SettingsPage({
     .order("created_at");
 
   return (
-    <main className="max-w-3xl rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-6">
+    <main className="min-w-0 space-y-4">
       <BrandSettingsForm project={project} pillars={pillars ?? []} />
     </main>
   );

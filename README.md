@@ -54,7 +54,7 @@ npm run dev
 
 ## Merkanalyse
 
-Bij een nieuw project kun je een website en/of stylboek (PDF/PNG/JPG) laten analyseren. Daarvoor is `AI_API_KEY` nodig, bij voorkeur met `AI_ANALYSIS_MODEL=gpt-4o`. De analyse vult toon, doelgroep, visuele regels en pijlers; jij keurt ze daarna goed.
+Bij een nieuw project kun je een website en/of styleguide (PDF/PNG/JPG) laten analyseren. Daarvoor is `AI_API_KEY` nodig, bij voorkeur met `AI_ANALYSIS_MODEL=gpt-4o`. De analyse vult toon, visuele regels, pijlers en een doelgroepbepaling (primair + secundair); jij keurt ze daarna goed.
 
 Geplande publicatie lokaal (naast `npm run dev`):
 
@@ -97,4 +97,4 @@ Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
 
 ## Versie
 
-0.4.0
+0.8.1

@@ -16,10 +16,10 @@ export async function POST(request: Request) {
     const projectId = z.string().uuid().parse(String(form.get("projectId") ?? ""));
     const file = form.get("stylebook");
     if (!(file instanceof File) || file.size === 0) {
-      return jsonError("Kies een stylboekbestand.");
+      return jsonError("Kies een styleguide-bestand.");
     }
     if (file.size > MAX_BYTES) {
-      return jsonError("Stylboek is groter dan 8 MB.");
+      return jsonError("Styleguide is groter dan 8 MB.");
     }
 
     const project = await assertProjectAccess(auth.supabase, projectId);
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       .select("*")
       .single();
     if (error || !updated) {
-      return jsonError(error?.message ?? "Stylboek opslaan mislukt.", 500);
+      return jsonError(error?.message ?? "Styleguide opslaan mislukt.", 500);
     }
 
     return NextResponse.json({ project: updated });

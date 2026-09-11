@@ -25,13 +25,17 @@ export function ProjectSidebar({
 }: {
   project?: Project | null;
   projects: Pick<Project, "name" | "slug" | "industry">[];
-  counts?: { draft: number; scheduled: number; published: number };
+  counts?: { draft: number; scheduled: number; published: number; brandDone?: number; brandTotal?: number };
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
   const filter = searchParams.get("filter");
   const base = project ? `/projects/${project.slug}` : "/projects";
+  const brandIncomplete =
+    typeof counts?.brandDone === "number" &&
+    typeof counts.brandTotal === "number" &&
+    counts.brandDone < counts.brandTotal;
 
   const links = project
     ? [
@@ -82,7 +86,10 @@ export function ProjectSidebar({
           href: `${base}/settings`,
           label: "Merk",
           icon: Sparkles,
-          count: null,
+          count:
+            typeof counts?.brandDone === "number" && typeof counts.brandTotal === "number"
+              ? `${counts.brandDone}/${counts.brandTotal}`
+              : null,
           match: () => pathname.startsWith(`${base}/settings`),
         },
       ]
@@ -101,9 +108,10 @@ export function ProjectSidebar({
   const initial = (project?.name ?? "P").slice(0, 1).toUpperCase();
 
   return (
-    <aside className="flex min-h-[calc(100vh-44px)] flex-col gap-5 rounded-3xl bg-[#1f1b18] p-4 text-white lg:sticky lg:top-[22px]">
-      <BrandMark href="/projects" light />
-      {project ? (
+    <div className="flex min-h-[calc(100vh-44px)] flex-col gap-3 lg:sticky lg:top-[22px]">
+      <BrandMark href="/projects" />
+      <aside className="flex flex-1 flex-col gap-5 rounded-3xl bg-[#1f1b18] p-4 text-white">
+        {project ? (
         <Link
           href="/projects"
           className="flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.07] p-2.5 text-left hover:bg-white/12"
@@ -111,10 +119,7 @@ export function ProjectSidebar({
           <span className="flex size-[30px] items-center justify-center rounded-[10px] bg-[#c2572c] text-[13px] font-bold">
             {initial}
           </span>
-          <span className="min-w-0 text-[13.5px] leading-tight font-semibold">
-            {project.name}
-            <span className="block text-xs font-normal text-white/55">{project.industry || "Merkproject"}</span>
-          </span>
+          <span className="min-w-0 truncate text-[13.5px] leading-tight font-semibold">{project.name}</span>
         </Link>
       ) : null}
       {projects.length > 1 && project ? (
@@ -161,13 +166,14 @@ export function ProjectSidebar({
             >
               <Icon className="size-[17px]" />
               {link.label}
-              {typeof link.count === "number" ? (
+              {link.count != null ? (
                 <span
                   className={cn(
                     "ml-auto text-[11.5px] font-semibold",
                     active
                       ? "text-[#1f1b18]/45"
-                      : link.label === "Gepland" && link.count > 0
+                      : (link.label === "Gepland" && typeof link.count === "number" && link.count > 0) ||
+                          (link.label === "Merk" && brandIncomplete)
                         ? "rounded-full bg-[#c2572c] px-1.5 py-0.5 text-white"
                         : "text-white/45"
                   )}
@@ -201,7 +207,8 @@ export function ProjectSidebar({
           Uitloggen
         </button>
       </div>
-    </aside>
+      </aside>
+    </div>
   );
 }
 

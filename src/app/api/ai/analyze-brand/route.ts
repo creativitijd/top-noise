@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return jsonError("Vul eerst de merknaam in.");
     }
     if (!websiteUrl && !(file instanceof File && file.size > 0)) {
-      return jsonError("Voeg een website of een stylboek toe voor de analyse.");
+      return jsonError("Voeg een website of een styleguide toe voor de analyse.");
     }
 
     let websiteContext: string | undefined;
