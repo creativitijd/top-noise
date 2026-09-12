@@ -49,6 +49,8 @@ export type Project = {
   goals: string | null;
   visual_guidelines: string | null;
   timezone: string;
+  country: string;
+  region: string | null;
   brand_analysis: Json | null;
   stylebook_path: string | null;
   stylebook_url: string | null;
@@ -80,6 +82,27 @@ export type Channel = {
 };
 
 export type ChannelPublic = Omit<Channel, "access_token" | "refresh_token">;
+
+export type DataSourceProvider = "ga4" | "gsc";
+export type DataSourceStatus = "disconnected" | "connected" | "expired" | "error";
+
+export type ProjectDataSource = {
+  id: string;
+  project_id: string;
+  provider: DataSourceProvider;
+  status: DataSourceStatus;
+  account_label: string | null;
+  external_id: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+  token_expires_at: string | null;
+  meta: Json;
+  snapshot: Json | null;
+  snapshot_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export type StrategyStatus = "draft" | "active" | "archived";
 
@@ -188,6 +211,10 @@ export type Database = {
       strategies: Table<
         Strategy,
         Pick<Strategy, "project_id" | "level" | "period_months" | "starts_on"> & Partial<Strategy>
+      >;
+      project_data_sources: Table<
+        ProjectDataSource,
+        Pick<ProjectDataSource, "project_id" | "provider"> & Partial<ProjectDataSource>
       >;
       posts: Table<Post, Pick<Post, "project_id" | "topic" | "scheduled_at"> & Partial<Post>>;
       post_targets: Table<

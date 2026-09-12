@@ -77,6 +77,7 @@ export function brandContextFromProject(project: Project): string {
   return [
     `Merk: ${project.name}`,
     project.industry ? `Branche: ${project.industry}` : null,
+    project.country ? `Land: ${project.country}${project.region ? ` / ${project.region}` : ""}` : null,
     project.target_audience ? `Doelgroep: ${project.target_audience}` : null,
     project.goals ? `Doelen: ${project.goals}` : null,
     project.tone_of_voice ? `Toon: ${project.tone_of_voice}` : null,

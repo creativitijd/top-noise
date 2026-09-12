@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { BarChart3, Check, Loader2, Send, Wand2, X } from "lucide-react";
+import { Check, Loader2, Send, Wand2, X } from "lucide-react";
+import { GoogleDataSources } from "@/components/projects/google-data-sources";
 import {
   AUTOMAAT_CHANNELS,
   LEVEL_META,
@@ -17,6 +18,15 @@ import {
   type StrategyRecord,
 } from "@/lib/automaat/model";
 import { PLATFORM_LABELS } from "@/lib/platforms";
+import {
+  COUNTRY_META,
+  formatHolidayLine,
+  holidayPlanForPeriod,
+  projectMarket,
+  REGION_META,
+  type BeRegion,
+  type MarketCountry,
+} from "@/lib/holidays";
 import { cn } from "@/lib/utils";
 
 type Step = "setup" | "snapshot" | "chat" | "proposal" | "generate";
@@ -25,6 +35,8 @@ export function AutomaatWizard({
   projectId,
   projectSlug,
   connectedChannels,
+  country,
+  region,
   open,
   onClose,
   embedded = false,
@@ -32,6 +44,8 @@ export function AutomaatWizard({
   projectId: string;
   projectSlug: string;
   connectedChannels: string[];
+  country?: string | null;
+  region?: string | null;
   open: boolean;
   onClose: () => void;
   embedded?: boolean;
@@ -55,6 +69,42 @@ export function AutomaatWizard({
   const scroller = useRef<HTMLDivElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(`automaat-setup-${projectId}`);
+      if (!raw) {
+        return;
+      }
+      const saved = JSON.parse(raw) as {
+        level?: StrategyLevel;
+        periodMonths?: 3 | 6 | 9;
+        startsOn?: string;
+        channels?: AutomaatChannel[];
+      };
+      if (saved.level) {
+        setLevel(saved.level);
+      }
+      if (saved.periodMonths === 3 || saved.periodMonths === 6 || saved.periodMonths === 9) {
+        setPeriodMonths(saved.periodMonths);
+      }
+      if (saved.startsOn) {
+        setStartsOn(saved.startsOn);
+      }
+      if (saved.channels && saved.channels.length > 0) {
+        setChannels(saved.channels);
+      }
+    } catch {
+      /* ignore corrupt setup cache */
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(
+      `automaat-setup-${projectId}`,
+      JSON.stringify({ level, periodMonths, startsOn, channels })
+    );
+  }, [channels, level, periodMonths, projectId, startsOn]);
 
   useEffect(() => {
     if (open) {
@@ -98,11 +148,6 @@ export function AutomaatWizard({
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [strategy?.conversation.messages.length, step]);
 
-  const lastAssistant = useMemo(() => {
-    const messages = strategy?.conversation.messages ?? [];
-    return [...messages].reverse().find((message) => message.role === "assistant");
-  }, [strategy?.conversation.messages]);
-
   if (!open) {
     return null;
   }
@@ -123,15 +168,17 @@ export function AutomaatWizard({
     setLevel(draft.level);
     if (draft.conversation.done && draft.document.pillars.length > 0) {
       setStep("proposal");
-    } else if (draft.conversation.done) {
+    } else if (draft.document.pillars.length > 0) {
+      setStep("chat");
+    } else {
       setPending(true);
+      setStep("snapshot");
       void propose(draft.id)
         .catch((error: unknown) => {
-          toast.error(error instanceof Error ? error.message : "Voorstel maken mislukt.");
+          toast.error(error instanceof Error ? error.message : "Draft maken mislukt.");
+          setStep("setup");
         })
         .finally(() => setPending(false));
-    } else {
-      setStep("chat");
     }
   }
 
@@ -141,6 +188,7 @@ export function AutomaatWizard({
       return;
     }
     setPending(true);
+    setStep("snapshot");
     try {
       const payload = await postJson<{ strategy: StrategyRecord }>("/api/strategies", {
         projectId,
@@ -150,18 +198,11 @@ export function AutomaatWizard({
         startsOn,
       });
       setStrategy(payload.strategy);
-      if (level === "eenvoudig") {
-        setStep("chat");
-      } else {
-        setStep("snapshot");
-        window.setTimeout(() => {
-          if (openRef.current) {
-            setStep("chat");
-          }
-        }, 1200);
-      }
+      setProposal(payload.strategy.document.pillars.length > 0 ? payload.strategy.document : null);
+      setStep("chat");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Starten mislukt.");
+      setStep("setup");
     } finally {
       setPending(false);
     }
@@ -179,8 +220,13 @@ export function AutomaatWizard({
         answer: value,
       });
       setStrategy(payload.strategy);
+      if (payload.strategy.document.pillars.length > 0) {
+        setProposal(payload.strategy.document);
+      }
       if (payload.strategy.conversation.done) {
-        await propose(payload.strategy.id);
+        setProposal(payload.strategy.document);
+        setMonthIndex(0);
+        setStep("proposal");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Antwoord versturen mislukt.");
@@ -193,9 +239,9 @@ export function AutomaatWizard({
     setPending(true);
     const payload = await postJson<{ strategy: StrategyRecord }>(`/api/strategies/${id}/propose`, {});
     setStrategy(payload.strategy);
-    setProposal(payload.strategy.document);
+    setProposal(payload.strategy.document.pillars.length > 0 ? payload.strategy.document : null);
     setMonthIndex(0);
-    setStep("proposal");
+    setStep(payload.strategy.conversation.done ? "proposal" : "chat");
   }
 
   async function saveProposal(next: StrategyDocument, confirmMonth?: string) {
@@ -235,9 +281,9 @@ export function AutomaatWizard({
 
   const writtenCount = postsPerMonth(strategy?.level ?? level);
   const months = proposal?.monthly_focus ?? [];
-  const currentMonth = months[monthIndex];
   const uitgebreidPending =
     (strategy?.level ?? level) === "uitgebreid" && months.some((item) => !item.confirmed);
+  const market = projectMarket({ country, region });
 
   return (
     <div
@@ -271,12 +317,16 @@ export function AutomaatWizard({
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
         {step === "setup" ? (
           <SetupStep
+            projectId={projectId}
+            projectSlug={projectSlug}
             draft={draft}
             level={level}
             periodMonths={periodMonths}
             startsOn={startsOn}
             channels={channels}
             connectedChannels={connectedChannels}
+            country={market.country}
+            region={market.region}
             pending={pending}
             onResume={resumeDraft}
             onLevel={setLevel}
@@ -291,16 +341,17 @@ export function AutomaatWizard({
           <div className="mx-auto flex max-w-[520px] flex-col items-center gap-3 px-5 py-24 text-center">
             <Loader2 className="size-8 animate-spin text-[#4f8637]" />
             <h2 className="font-[family-name:var(--font-heading)] text-[24px] font-semibold tracking-[-0.03em]">
-              Ik haal een beeld van je merk op
+              Ik maak een eerste draft uit je website-analyse
             </h2>
             <p className="text-sm text-[#635a52]">
-              Geen live Analytics. Nulmetingen krijgen het label schatting.
+              Daarna toets ik hem met ja/nee, zodat hij bij jouw wensen blijft passen.
             </p>
           </div>
         ) : null}
 
         {step === "chat" && strategy ? (
           <div className="mx-auto flex w-full max-w-[680px] flex-col gap-4 px-5 py-8 pb-36">
+            {strategy.document.pillars.length > 0 ? <DraftSummary document={strategy.document} /> : null}
             {strategy.conversation.messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -317,22 +368,6 @@ export function AutomaatWizard({
                 <Loader2 className="size-4 animate-spin" />
                 Even nadenken…
               </div>
-            ) : null}
-            {strategy.conversation.done && !pending ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPending(true);
-                  void propose(strategy.id)
-                    .catch((error: unknown) => {
-                      toast.error(error instanceof Error ? error.message : "Voorstel maken mislukt.");
-                    })
-                    .finally(() => setPending(false));
-                }}
-                className="w-fit rounded-full bg-[#4f8637] px-4 py-2 text-sm font-semibold text-white"
-              >
-                Voorstel maken
-              </button>
             ) : null}
           </div>
         ) : null}
@@ -396,45 +431,51 @@ export function AutomaatWizard({
 
       {step === "chat" && strategy && !strategy.conversation.done ? (
         <div className="border-t border-[rgb(31_27_24_/_8%)] bg-[#f5f5f4] px-5 py-4">
-          <div className="mx-auto flex w-full max-w-[680px] flex-col gap-2">
-            {lastAssistant?.chips && lastAssistant.chips.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {lastAssistant.chips.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    disabled={pending}
-                    onClick={() => void send(chip)}
-                    className="rounded-full bg-white px-3 py-1.5 text-[13px] font-medium text-[#635a52] hover:bg-[#1f1b18] hover:text-white disabled:opacity-50"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <form
-              className="flex items-end gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send(answer);
-              }}
-            >
-              <textarea
-                value={answer}
-                onChange={(event) => setAnswer(event.target.value)}
-                rows={2}
-                placeholder="Typ je antwoord…"
-                className="min-h-[48px] flex-1 resize-none rounded-[18px] border border-[rgb(31_27_24_/_12%)] bg-white px-4 py-3 text-sm outline-none focus:border-[#1f1b18]"
-              />
-              <button
-                type="submit"
-                disabled={pending || answer.trim().length < 2}
-                className="flex size-12 items-center justify-center rounded-full bg-[#4f8637] text-white disabled:opacity-50"
-                aria-label="Versturen"
+          <div className="mx-auto flex w-full max-w-[680px] flex-col gap-3">
+            {strategy.conversation.awaitingCorrection ? (
+              <form
+                className="flex items-end gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void send(answer);
+                }}
               >
-                <Send className="size-4" />
-              </button>
-            </form>
+                <textarea
+                  value={answer}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  rows={2}
+                  placeholder="Wat moet er anders? Eén zin is genoeg."
+                  className="min-h-[48px] flex-1 resize-none rounded-[18px] border border-[rgb(31_27_24_/_12%)] bg-white px-4 py-3 text-sm outline-none focus:border-[#1f1b18]"
+                />
+                <button
+                  type="submit"
+                  disabled={pending || answer.trim().length < 2}
+                  className="flex size-12 items-center justify-center rounded-full bg-[#4f8637] text-white disabled:opacity-50"
+                  aria-label="Versturen"
+                >
+                  <Send className="size-4" />
+                </button>
+              </form>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => void send("Ja")}
+                  className="rounded-[18px] bg-[#4f8637] px-4 py-3.5 text-[15px] font-semibold text-white hover:bg-[#3f6b2b] disabled:opacity-50"
+                >
+                  Ja
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => void send("Nee")}
+                  className="rounded-[18px] bg-white px-4 py-3.5 text-[15px] font-semibold text-[#1f1b18] ring-1 ring-[rgb(31_27_24_/_12%)] hover:bg-[#1f1b18] hover:text-white disabled:opacity-50"
+                >
+                  Nee
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -473,12 +514,16 @@ export function AutomaatWizard({
 }
 
 function SetupStep({
+  projectId,
+  projectSlug,
   draft,
   level,
   periodMonths,
   startsOn,
   channels,
   connectedChannels,
+  country,
+  region,
   pending,
   onResume,
   onLevel,
@@ -487,12 +532,16 @@ function SetupStep({
   onChannels,
   onStart,
 }: {
+  projectId: string;
+  projectSlug: string;
   draft: StrategyRecord | null;
   level: StrategyLevel;
   periodMonths: 3 | 6 | 9;
   startsOn: string;
   channels: AutomaatChannel[];
   connectedChannels: string[];
+  country: MarketCountry;
+  region: BeRegion | null;
   pending: boolean;
   onResume: () => void;
   onLevel: (level: StrategyLevel) => void;
@@ -501,6 +550,9 @@ function SetupStep({
   onChannels: (value: AutomaatChannel[] | ((current: AutomaatChannel[]) => AutomaatChannel[])) => void;
   onStart: () => void;
 }) {
+  const plan = holidayPlanForPeriod({ startsOn, periodMonths, country, region });
+  const marketLabel = plan.region ? `${COUNTRY_META[country].label} (${REGION_META[plan.region].label})` : COUNTRY_META[country].label;
+  const holidayPreview = [...plan.moments, ...plan.closed].slice(0, 8).map(formatHolidayLine);
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-7 px-5 py-8">
       {draft ? (
@@ -523,7 +575,7 @@ function SetupStep({
 
       <section>
         <h2 className="mb-3 font-[family-name:var(--font-heading)] text-[22px] font-semibold tracking-[-0.03em]">
-          Hoe diep mag ik doorvragen?
+          Hoe scherp wil je de draft toetsen?
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {STRATEGY_LEVELS.map((item) => (
@@ -580,6 +632,23 @@ function SetupStep({
         </label>
       </section>
 
+      <section className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white px-5 py-4">
+        <h2 className="font-[family-name:var(--font-heading)] text-[18px] font-semibold tracking-[-0.03em]">
+          Feestdagen · {marketLabel}
+        </h2>
+        <p className="mt-1 text-sm text-[#635a52]">
+          Land staat op Merk. Vrije dagen krijgen geen post; momenten zoals Sinterklaas of Black Friday wel.
+        </p>
+        {holidayPreview.length > 0 ? (
+          <p className="mt-2 text-[13px] leading-relaxed text-[#54603f]">{holidayPreview.join(" · ")}</p>
+        ) : (
+          <p className="mt-2 text-[13px] text-[#8b8079]">Geen feestdagen in deze periode.</p>
+        )}
+        <a href={`/projects/${projectSlug}/settings`} className="mt-3 inline-block text-[12.5px] font-semibold text-[#4f8637]">
+          Land of regio wijzigen
+        </a>
+      </section>
+
       <section>
         <h2 className="mb-3 font-[family-name:var(--font-heading)] text-[22px] font-semibold tracking-[-0.03em]">
           Kanalen
@@ -613,33 +682,24 @@ function SetupStep({
         </p>
       </section>
 
-      <section className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white px-5 py-4">
-        <h2 className="font-[family-name:var(--font-heading)] text-[18px] font-semibold tracking-[-0.03em]">
-          Site-data (optioneel)
-        </h2>
-        <p className="mt-1 text-sm text-[#635a52]">
-          {level === "uitgebreid"
-            ? "Bij uitgebreid is een nulmeting sterk aangeraden. Koppeling volgt later; nu gebruiken we je merkprofiel als schatting."
-            : "Google Analytics en Search Console volgen later. Overslaan kan altijd."}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => toast.message("Google Analytics-koppeling volgt in een volgende versie.")}
-            className="inline-flex items-center gap-2 rounded-full border border-[rgb(31_27_24_/_14%)] px-4 py-2 text-sm font-semibold"
-          >
-            <BarChart3 className="size-4" />
-            Google Analytics koppelen
-          </button>
-          <button
-            type="button"
-            onClick={() => toast.message("Search Console-koppeling volgt in een volgende versie.")}
-            className="rounded-full border border-[rgb(31_27_24_/_14%)] px-4 py-2 text-sm font-semibold"
-          >
-            Search Console koppelen
-          </button>
-        </div>
-      </section>
+      {level === "eenvoudig" ? null : (
+        <section className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white px-5 py-4">
+          <h2 className="font-[family-name:var(--font-heading)] text-[18px] font-semibold tracking-[-0.03em]">
+            Site-data (optioneel)
+          </h2>
+          <p className="mt-1 mb-3 text-sm text-[#635a52]">
+            {level === "uitgebreid"
+              ? "Bij uitgebreid is een nulmeting sterk aangeraden. Alleen lezen, geen testaccount: de koppeling blijft staan tot jij hem loskoppelt."
+              : "Koppel GA4 of Search Console voor een echte nulmeting. Overslaan kan altijd."}
+          </p>
+          <GoogleDataSources
+            projectId={projectId}
+            projectSlug={projectSlug}
+            compact
+            returnPath={`/projects/${projectSlug}/automaat`}
+          />
+        </section>
+      )}
 
       <button
         type="button"
@@ -648,7 +708,7 @@ function SetupStep({
         className="inline-flex w-fit items-center gap-2 rounded-full bg-[#4f8637] px-5 py-3 text-sm font-semibold text-white hover:bg-[#3f6b2b] disabled:opacity-60"
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-        Strategiegesprek starten
+        Draft maken
       </button>
     </div>
   );
@@ -681,8 +741,8 @@ function ProposalStep({
           Voorstel
         </h2>
         <p className="mt-1 text-sm text-[#635a52]">
-          Dit is de kaart, geen essay. Stuur bij wat scheef zit. Eerste maand schrijf ik voluit ({writtenCount} posts),
-          de rest als onderwerp-concept.
+          Draft uit je website-analyse, bijgestuurd met ja/nee. Stuur bij wat nog scheef zit. Eerste maand schrijf ik
+          voluit ({writtenCount} posts), de rest als onderwerp-concept.
         </p>
       </div>
 
@@ -817,6 +877,19 @@ function ProposalStep({
         </Card>
       ) : null}
 
+      {proposal.season.moments.length + proposal.season.closed.length > 0 ? (
+        <Card title="Feestdagen">
+          <p className="text-sm leading-relaxed text-[#635a52]">
+            {[...proposal.season.moments, ...proposal.season.closed].map(formatHolidayLine).join(" · ")}
+          </p>
+          <Field
+            label="Aanpak"
+            value={proposal.season.notes}
+            onChange={(value) => onProposal({ ...proposal, season: { ...proposal.season, notes: value } })}
+          />
+        </Card>
+      ) : null}
+
       <Card title="Maandzwaartepunten">
         {level === "uitgebreid" && currentMonth ? (
           <div className="rounded-2xl bg-[#f1f6e7] px-4 py-4">
@@ -921,15 +994,31 @@ function Field({
   );
 }
 
+function DraftSummary({ document }: { document: StrategyDocument }) {
+  return (
+    <section className="rounded-[22px] border border-[rgb(79_134_55_/_22%)] bg-[#f1f6e7] px-5 py-4">
+      <p className="text-[12.5px] font-semibold tracking-[0.08em] text-[#3f6b2b] uppercase">Eerste draft</p>
+      <p className="mt-2 text-[15px] leading-relaxed text-[#1f1b18]">
+        Voor {document.positioning.for_whom || "—"}, niet {document.positioning.against_alternative || "—"}.
+      </p>
+      {document.pillars.length > 0 ? (
+        <p className="mt-2 text-[13px] leading-snug text-[#54603f]">
+          {document.pillars.map((pillar) => `${pillar.name} (${pillar.share_pct}%)`).join(" · ")}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function stepLabel(step: Step): string {
   if (step === "setup") {
     return "Setup";
   }
   if (step === "snapshot") {
-    return "Merkbeeld";
+    return "Eerste draft";
   }
   if (step === "chat") {
-    return "Strategiegesprek";
+    return "Afstemmen";
   }
   if (step === "proposal") {
     return "Voorstel";

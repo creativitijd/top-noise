@@ -371,15 +371,32 @@ export function emptyBrandAnalysis(seed: Partial<BrandAnalysis> = {}): BrandAnal
 }
 
 export function mergeVisualIdentity(previous: BrandAnalysis, incoming: BrandAnalysis): BrandAnalysis {
-  return withSyncedPalette({
-    ...incoming,
-    primaryColors: mergeSwatches(previous.primaryColors, incoming.primaryColors),
-    supportingColors: mergeSwatches(previous.supportingColors, incoming.supportingColors),
-    neutralColors: mergeSwatches(previous.neutralColors, incoming.neutralColors),
-    typography: incoming.typography.trim() || previous.typography,
-    imageStyle: incoming.imageStyle.trim() || previous.imageStyle,
-    visualAvoid: uniqueStrings([...incoming.visualAvoid, ...previous.visualAvoid]),
+  const source = ensureVisualIdentity(incoming);
+  const incomingPrimary = cleanSwatches(source.primaryColors);
+  const incomingSupporting = cleanSwatches(source.supportingColors);
+  const incomingNeutral = cleanSwatches(source.neutralColors);
+  const hasIncomingColors =
+    incomingPrimary.length + incomingSupporting.length + incomingNeutral.length > 0;
+
+  const next = withSyncedPalette({
+    ...source,
+    primaryColors: hasIncomingColors ? withPriorSwatchMeta(previous.primaryColors, incomingPrimary) : previous.primaryColors,
+    supportingColors: hasIncomingColors
+      ? withPriorSwatchMeta(previous.supportingColors, incomingSupporting)
+      : previous.supportingColors,
+    neutralColors: hasIncomingColors ? withPriorSwatchMeta(previous.neutralColors, incomingNeutral) : previous.neutralColors,
+    typography: source.typography.trim() || previous.typography,
+    imageStyle: source.imageStyle.trim() || previous.imageStyle,
+    visualAvoid: source.visualAvoid.length > 0 ? uniqueStrings(source.visualAvoid) : previous.visualAvoid,
   });
+
+  const composed = composeVisualGuidelines(next);
+  return {
+    ...next,
+    visualGuidelines: hasIncomingColors
+      ? source.visualGuidelines.trim() || composed || previous.visualGuidelines
+      : source.visualGuidelines.trim() || previous.visualGuidelines,
+  };
 }
 
 function hydrateVisualIdentity(analysis: BrandAnalysis, observedColors: string[]): BrandAnalysis {
@@ -418,31 +435,16 @@ function cleanSwatches(swatches: ColorSwatch[]): ColorSwatch[] {
     .filter((swatch) => swatch.hex.length >= 4);
 }
 
-function mergeSwatches(previous: ColorSwatch[], incoming: ColorSwatch[]): ColorSwatch[] {
-  const result: ColorSwatch[] = [];
-  const seen = new Set<string>();
-  for (const swatch of incoming) {
+function withPriorSwatchMeta(previous: ColorSwatch[], incoming: ColorSwatch[]): ColorSwatch[] {
+  return incoming.map((swatch) => {
     const key = (normalizeHex(swatch.hex) ?? swatch.hex.trim()).toUpperCase();
-    if (!key || seen.has(key)) {
-      continue;
-    }
     const prior = previous.find((item) => (normalizeHex(item.hex) ?? item.hex.trim()).toUpperCase() === key);
-    seen.add(key);
-    result.push({
+    return {
       hex: normalizeHex(swatch.hex) ?? swatch.hex,
-      name: prior?.name.trim() || swatch.name.trim(),
-      usage: prior?.usage.trim() || swatch.usage.trim(),
-    });
-  }
-  for (const swatch of previous) {
-    const key = (normalizeHex(swatch.hex) ?? swatch.hex.trim()).toUpperCase();
-    if (!key || seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    result.push(swatch);
-  }
-  return result;
+      name: swatch.name.trim() || prior?.name.trim() || "",
+      usage: swatch.usage.trim() || prior?.usage.trim() || "",
+    };
+  });
 }
 
 function uniqueStrings(values: string[]): string[] {

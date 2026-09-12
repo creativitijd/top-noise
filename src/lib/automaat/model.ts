@@ -16,21 +16,21 @@ export const LEVEL_META: Record<
 > = {
   eenvoudig: {
     label: "Eenvoudig",
-    time: "5–10 min",
-    blurb: "Basisvragen, een kort plan, zonder doorvragen.",
+    time: "3–5 min",
+    blurb: "Draft uit je website, drie ja/nee-vragen.",
     probes: 0,
   },
   normaal: {
     label: "Normaal",
-    time: "15–20 min",
-    blurb: "1–2 rondes per onderwerp, lichte concurrentie, één hoofd-KPI.",
-    probes: 2,
+    time: "8–12 min",
+    blurb: "Draft plus bevestigen van doel, concurrentie en pillars.",
+    probes: 1,
   },
   uitgebreid: {
     label: "Uitgebreid",
-    time: "45–60 min",
-    blurb: "Elk antwoord wordt getoetst. Concurrentie, KPI’s en maanden apart.",
-    probes: 4,
+    time: "15–20 min",
+    blurb: "Draft, elk onderdeel toetsen, maanden daarna bevestigen.",
+    probes: 1,
   },
 };
 
@@ -101,6 +101,16 @@ export const conversationStateSchema = z.object({
   notes: z.record(z.string(), z.string()).default({}),
   messages: z.array(chatMessageSchema).default([]),
   done: z.boolean().default(false),
+  awaitingCorrection: z.boolean().default(false),
+  questions: z
+    .array(
+      z.object({
+        id: z.string(),
+        topic: z.string(),
+        question: z.string(),
+      })
+    )
+    .default([]),
 });
 
 export const strategyDocumentSchema = z.object({
@@ -160,6 +170,15 @@ export const strategyDocumentSchema = z.object({
       })
     )
     .default([]),
+  season: z
+    .object({
+      country: z.string().default(""),
+      region: z.string().default(""),
+      notes: z.string().default(""),
+      closed: z.array(z.object({ date: z.string(), name: z.string() })).default([]),
+      moments: z.array(z.object({ date: z.string(), name: z.string() })).default([]),
+    })
+    .default({ country: "", region: "", notes: "", closed: [], moments: [] }),
   data_sources: z
     .object({
       ga4: z.object({ connected: z.boolean().default(false), last_sync: z.string().nullable().default(null) }),
@@ -199,22 +218,15 @@ export type StrategyRecord = {
   updated_at: string;
 };
 
-export function emptyConversation(level: StrategyLevel): ConversationState {
-  const topic = topicsForLevel(level)[0];
-  const copy = TOPIC_COPY[topic];
+export function emptyConversation(_level: StrategyLevel): ConversationState {
   return {
     topicIndex: 0,
     probes: 0,
     notes: {},
     done: false,
-    messages: [
-      {
-        role: "assistant",
-        content: copy.question,
-        chips: copy.chips,
-        topic,
-      },
-    ],
+    awaitingCorrection: false,
+    questions: [],
+    messages: [],
   };
 }
 

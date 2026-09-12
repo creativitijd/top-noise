@@ -27,6 +27,7 @@ import {
   type CalendarPost,
 } from "@/lib/planner/style";
 import { cn } from "@/lib/utils";
+import { holidayMap, holidaysInRange, projectMarket } from "@/lib/holidays";
 import type { ChannelPublic } from "@/types/database";
 
 const WEEKDAY_LABELS = ["MA", "DI", "WO", "DO", "VR", "ZA", "ZO"];
@@ -38,12 +39,16 @@ export function PlannerDashboard({
   posts,
   channels,
   filter,
+  country,
+  region,
 }: {
   projectId: string;
   projectSlug: string;
   posts: CalendarPost[];
   channels: Pick<ChannelPublic, "platform" | "status">[];
   filter: string | null;
+  country?: string | null;
+  region?: string | null;
 }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<"week" | "month">("week");
@@ -112,6 +117,13 @@ export function PlannerDashboard({
 
   const calendarTitle = format(cursor, "MMMM yyyy", { locale: nl });
   const featuredId = nextPost?.id;
+  const market = projectMarket({ country, region });
+  const holidaysByDay = useMemo(() => {
+    const days = view === "week" ? weekDays : monthDays;
+    const from = format(days[0] ?? cursor, "yyyy-MM-dd");
+    const to = format(days[days.length - 1] ?? cursor, "yyyy-MM-dd");
+    return holidayMap(holidaysInRange(from, to, market.country, market.region));
+  }, [country, cursor, market.country, market.region, monthDays, region, view, weekDays]);
 
   function shift(delta: number) {
     setCursor((value) => (view === "week" ? addWeeks(value, delta) : addMonths(value, delta)));
@@ -352,6 +364,7 @@ export function PlannerDashboard({
           <WeekGrid
             days={weekDays}
             postsByDay={postsByDay}
+            holidaysByDay={holidaysByDay}
             projectSlug={projectSlug}
             featuredId={featuredId}
             onCreate={(key) => setCreateDate(key)}
@@ -361,6 +374,7 @@ export function PlannerDashboard({
             days={monthDays}
             cursor={cursor}
             postsByDay={postsByDay}
+            holidaysByDay={holidaysByDay}
             projectSlug={projectSlug}
             onCreate={(key) => setCreateDate(key)}
           />
@@ -380,12 +394,14 @@ export function PlannerDashboard({
 function WeekGrid({
   days,
   postsByDay,
+  holidaysByDay,
   projectSlug,
   featuredId,
   onCreate,
 }: {
   days: Date[];
   postsByDay: Map<string, CalendarPost[]>;
+  holidaysByDay: Map<string, { name: string; kind: string }[]>;
   projectSlug: string;
   featuredId?: string;
   onCreate: (key: string) => void;
@@ -397,12 +413,15 @@ function WeekGrid({
           <span />
           {days.map((day) => {
             const weekend = isWeekend(day);
+            const key = format(day, "yyyy-MM-dd");
+            const holiday = holidaysByDay.get(key)?.[0];
             return (
               <div
                 key={day.toISOString()}
                 className={cn(
                   "border-l border-[rgb(31_27_24_/_6%)] px-2 py-3 text-center",
-                  weekend && "bg-[#fafaf9]"
+                  weekend && "bg-[#fafaf9]",
+                  holiday?.kind === "closed" && "bg-[#fbf1e8]"
                 )}
               >
                 <span className={cn("block text-[11px] font-semibold tracking-[0.08em]", weekend ? "text-[#c4bcb6]" : "text-[#aaa09a]")}>
@@ -417,6 +436,9 @@ function WeekGrid({
                 >
                   {format(day, "d")}
                 </span>
+                {holiday ? (
+                  <span className="mt-1 block truncate text-[10px] font-semibold text-[#b8562c]">{holiday.name}</span>
+                ) : null}
               </div>
             );
           })}
@@ -469,12 +491,14 @@ function MonthGrid({
   days,
   cursor,
   postsByDay,
+  holidaysByDay,
   projectSlug,
   onCreate,
 }: {
   days: Date[];
   cursor: Date;
   postsByDay: Map<string, CalendarPost[]>;
+  holidaysByDay: Map<string, { name: string; kind: string }[]>;
   projectSlug: string;
   onCreate: (key: string) => void;
 }) {
@@ -493,6 +517,7 @@ function MonthGrid({
           const inMonth = isSameMonth(day, cursor);
           const weekend = isWeekend(day);
           const dayPosts = postsByDay.get(key) ?? [];
+          const holiday = holidaysByDay.get(key)?.[0];
           return (
             <button
               key={key}
@@ -500,7 +525,8 @@ function MonthGrid({
               onClick={() => onCreate(key)}
               className={cn(
                 "flex min-h-[104px] flex-col gap-1.5 border-t border-l border-[rgb(31_27_24_/_6%)] px-2.5 py-2 text-left",
-                (!inMonth || weekend) && "bg-[#fafaf9]"
+                (!inMonth || weekend) && "bg-[#fafaf9]",
+                holiday?.kind === "closed" && inMonth && "bg-[#fbf1e8]"
               )}
             >
               <span
@@ -513,6 +539,9 @@ function MonthGrid({
               >
                 {format(day, "d")}
               </span>
+              {holiday && inMonth ? (
+                <span className="truncate text-[10px] font-semibold text-[#b8562c]">{holiday.name}</span>
+              ) : null}
               {dayPosts.slice(0, 3).map((post) => {
                 const platform = primaryPlatform(post);
                 const palette = platform ? PLATFORM_CARD[platform] : null;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertProjectAccess, getAuth } from "@/lib/auth/session";
-import { nextConversationTurn } from "@/lib/automaat/conversation";
+import { nextTuneTurn } from "@/lib/automaat/conversation";
 import { asJson, brandContextFromProject, loadStrategy, serializeStrategy, snapshotText } from "@/lib/automaat/store";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 
@@ -25,17 +25,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ strategy });
     }
 
-    const conversation = await nextConversationTurn({
+    const next = await nextTuneTurn({
       level: strategy.level,
       brandContext: brandContextFromProject(project),
       snapshot: snapshotText(row.data_snapshot),
       conversation: strategy.conversation,
+      document: strategy.document,
       answer: body.answer,
     });
 
     const { data, error } = await auth.supabase
       .from("strategies")
-      .update({ conversation: asJson(conversation) })
+      .update({
+        conversation: asJson(next.conversation),
+        document: asJson(next.document),
+      })
       .eq("id", id)
       .select("*")
       .single();

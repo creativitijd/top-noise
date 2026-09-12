@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuth, assertProjectAccess } from "@/lib/auth/session";
-import {
-  AUTOMAAT_CHANNELS,
-  STRATEGY_LEVELS,
-  emptyConversation,
-  emptyDocument,
-} from "@/lib/automaat/model";
+import { startTuneConversation } from "@/lib/automaat/conversation";
+import { AUTOMAAT_CHANNELS, STRATEGY_LEVELS, emptyConversation } from "@/lib/automaat/model";
+import { proposeStrategy } from "@/lib/automaat/propose";
 import {
   STRATEGIES_MIGRATION_HINT,
   asJson,
-  estimatedSnapshotFromProject,
+  brandContextFromProject,
   missingStrategiesSchema,
   serializeStrategy,
 } from "@/lib/automaat/store";
+import { strategySnapshotFromSources } from "@/lib/google/sources";
+import { projectMarket } from "@/lib/holidays";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
+
+export const maxDuration = 60;
 
 const createSchema = z.object({
   projectId: z.string().uuid(),
@@ -63,9 +64,22 @@ export async function POST(request: Request) {
     }
     const body = await readJson(request, createSchema);
     const project = await assertProjectAccess(auth.supabase, body.projectId);
-    const estimated = estimatedSnapshotFromProject(project);
-    const conversation = emptyConversation(body.level);
-    const document = emptyDocument();
+    const market = projectMarket(project);
+    const estimated = await strategySnapshotFromSources(auth.supabase, project);
+    const snapshotText = estimated.text;
+    const document = await proposeStrategy({
+      projectName: project.name,
+      level: body.level,
+      periodMonths: body.periodMonths,
+      startsOn: body.startsOn,
+      channels: body.channels,
+      brandContext: brandContextFromProject(project),
+      conversation: emptyConversation(body.level),
+      snapshotText,
+      country: market.country,
+      region: market.region,
+    });
+    const conversation = startTuneConversation(document, body.level);
 
     const { data, error } = await auth.supabase
       .from("strategies")
@@ -78,12 +92,7 @@ export async function POST(request: Request) {
         starts_on: body.startsOn,
         conversation: asJson(conversation),
         document: asJson(document),
-        data_snapshot: asJson({
-          ...(typeof estimated.snapshot === "object" && estimated.snapshot && !Array.isArray(estimated.snapshot)
-            ? estimated.snapshot
-            : {}),
-          text: estimated.text,
-        }),
+        data_snapshot: estimated.snapshot,
       })
       .select("*")
       .single();
@@ -95,7 +104,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ strategy: serializeStrategy(data), snapshotText: estimated.text });
+    return NextResponse.json({ strategy: serializeStrategy(data), snapshotText });
   } catch (error) {
     return handleRouteError(error);
   }

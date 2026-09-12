@@ -5,9 +5,12 @@ import { brandAnalysisSchema } from "@/lib/ai/brand-analysis";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { uniqueSlug } from "@/lib/slug";
 import { DEFAULT_TIMEZONE } from "@/lib/dates";
+import { COUNTRY_META, projectMarket } from "@/lib/holidays";
 
 const MIGRATION_HINT =
   "Draai in Supabase → SQL Editor het bestand supabase/migrations/0002_brand_analysis.sql en klik daarna Run.";
+const MARKET_MIGRATION_HINT =
+  "Draai in Supabase → SQL Editor het bestand supabase/migrations/0005_market.sql en klik daarna Run.";
 
 function missingBrandColumn(message: string | undefined): boolean {
   if (!message) {
@@ -17,6 +20,17 @@ function missingBrandColumn(message: string | undefined): boolean {
   return (
     lower.includes("schema cache") &&
     (lower.includes("brand_analysis") || lower.includes("stylebook_path") || lower.includes("stylebook_url"))
+  );
+}
+
+function missingMarketColumn(message: string | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+  const lower = message.toLowerCase();
+  return (
+    (lower.includes("country") || lower.includes("region")) &&
+    (lower.includes("schema cache") || lower.includes("does not exist") || lower.includes("could not find"))
   );
 }
 
@@ -30,6 +44,8 @@ const createSchema = z.object({
   visualGuidelines: z.string().optional(),
   brandAnalysis: brandAnalysisSchema.optional(),
   timezone: z.string().optional(),
+  country: z.enum(["NL", "BE", "DE"]).optional(),
+  region: z.enum(["VLG", "WAL", "BRU"]).nullable().optional(),
   pillars: z
     .array(
       z.object({
@@ -52,6 +68,11 @@ export async function POST(request: Request) {
       return jsonError(orgError?.message ?? "Workspace ontbreekt.", 500);
     }
 
+    const market = projectMarket({
+      country: body.country,
+      region: body.region,
+      timezone: body.timezone,
+    });
     const core = {
       organization_id: orgId,
       name: body.name,
@@ -62,7 +83,9 @@ export async function POST(request: Request) {
       target_audience: body.targetAudience || null,
       goals: body.goals || null,
       visual_guidelines: body.visualGuidelines || null,
-      timezone: body.timezone || DEFAULT_TIMEZONE,
+      timezone: body.timezone || COUNTRY_META[market.country].timezone || DEFAULT_TIMEZONE,
+      country: market.country,
+      region: market.region,
     };
 
     let { data: project, error } = await auth.supabase
@@ -72,6 +95,19 @@ export async function POST(request: Request) {
       .single();
 
     let warning: string | undefined;
+    if (error && missingMarketColumn(error.message)) {
+      const { country: _country, region: _region, ...withoutMarket } = core;
+      void _country;
+      void _region;
+      const retry = await auth.supabase
+        .from("projects")
+        .insert({ ...withoutMarket, brand_analysis: body.brandAnalysis ?? null })
+        .select("*")
+        .single();
+      project = retry.data;
+      error = retry.error;
+      warning = `Merk opgeslagen, land/feestdagen nog niet. ${MARKET_MIGRATION_HINT}`;
+    }
     if (error && missingBrandColumn(error.message)) {
       const retry = await auth.supabase.from("projects").insert(core).select("*").single();
       project = retry.data;
@@ -81,7 +117,11 @@ export async function POST(request: Request) {
 
     if (error || !project) {
       return jsonError(
-        missingBrandColumn(error?.message) ? MIGRATION_HINT : (error?.message ?? "Project aanmaken mislukt."),
+        missingMarketColumn(error?.message)
+          ? MARKET_MIGRATION_HINT
+          : missingBrandColumn(error?.message)
+            ? MIGRATION_HINT
+            : (error?.message ?? "Project aanmaken mislukt."),
         500
       );
     }
@@ -115,6 +155,10 @@ export async function PATCH(request: Request) {
     const body = await readJson(request, updateSchema);
     await assertProjectAccess(auth.supabase, body.id);
 
+    const market =
+      body.country !== undefined || body.region !== undefined
+        ? projectMarket({ country: body.country, region: body.region, timezone: body.timezone })
+        : null;
     const core = {
       name: body.name,
       website_url: body.websiteUrl,
@@ -124,6 +168,7 @@ export async function PATCH(request: Request) {
       goals: body.goals,
       visual_guidelines: body.visualGuidelines,
       timezone: body.timezone,
+      ...(market ? { country: market.country, region: market.region } : {}),
     };
     const payload =
       body.brandAnalysis === undefined ? core : { ...core, brand_analysis: body.brandAnalysis };
@@ -136,6 +181,17 @@ export async function PATCH(request: Request) {
       .single();
 
     let warning: string | undefined;
+    if (error && missingMarketColumn(error.message)) {
+      const { country: _country, region: _region, ...withoutMarket } = core;
+      void _country;
+      void _region;
+      const retryPayload =
+        body.brandAnalysis === undefined ? withoutMarket : { ...withoutMarket, brand_analysis: body.brandAnalysis };
+      const retry = await auth.supabase.from("projects").update(retryPayload).eq("id", body.id).select("*").single();
+      project = retry.data;
+      error = retry.error;
+      warning = `Merk opgeslagen, land/feestdagen nog niet. ${MARKET_MIGRATION_HINT}`;
+    }
     if (error && missingBrandColumn(error.message)) {
       const retry = await auth.supabase.from("projects").update(core).eq("id", body.id).select("*").single();
       project = retry.data;
@@ -145,7 +201,11 @@ export async function PATCH(request: Request) {
 
     if (error || !project) {
       return jsonError(
-        missingBrandColumn(error?.message) ? MIGRATION_HINT : (error?.message ?? "Bijwerken mislukt."),
+        missingMarketColumn(error?.message)
+          ? MARKET_MIGRATION_HINT
+          : missingBrandColumn(error?.message)
+            ? MIGRATION_HINT
+            : (error?.message ?? "Bijwerken mislukt."),
         500
       );
     }

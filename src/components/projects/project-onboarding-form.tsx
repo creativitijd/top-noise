@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { BrandAnalysis } from "@/lib/ai/brand-analysis";
 import { AudienceEditor, audiencesToSummary } from "@/components/projects/audience-editor";
+import { MarketPicker } from "@/components/projects/market-picker";
 import { VisualFields } from "@/components/projects/visual-fields";
 import { VoiceFields } from "@/components/projects/voice-fields";
+import { COUNTRY_META, type BeRegion, type MarketCountry } from "@/lib/holidays";
 
 const defaultPillars = [
   { name: "Educatie", description: "Uitleg en inzichten uit de praktijk" },
@@ -33,6 +35,8 @@ export function ProjectOnboardingForm() {
   const [goals, setGoals] = useState("");
   const [visualGuidelines, setVisualGuidelines] = useState("");
   const [pillars, setPillars] = useState(defaultPillars);
+  const [country, setCountry] = useState<MarketCountry>("NL");
+  const [region, setRegion] = useState<BeRegion | null>(null);
 
   function applyAnalysis(result: BrandAnalysis) {
     setAnalysis(result);
@@ -91,6 +95,9 @@ export function ProjectOnboardingForm() {
           targetAudience,
           goals,
           visualGuidelines,
+          country,
+          region,
+          timezone: COUNTRY_META[country].timezone,
           brandAnalysis: analysis ?? undefined,
           pillars: pillars.filter((pillar) => pillar.name.trim()),
         }),
@@ -136,6 +143,16 @@ export function ProjectOnboardingForm() {
           </Field>
           <Field label="Branche">
             <Input value={industry} onChange={(event) => setIndustry(event.target.value)} />
+          </Field>
+          <Field label="Land">
+            <MarketPicker
+              country={country}
+              region={region}
+              onChange={(next) => {
+                setCountry(next.country);
+                setRegion(next.region);
+              }}
+            />
           </Field>
           <Field label="Styleguide (PDF, PNG of JPG)">
             <Input

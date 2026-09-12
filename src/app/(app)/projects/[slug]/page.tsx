@@ -58,6 +58,8 @@ export default async function ProjectCalendarPage({
       posts={calendarPosts}
       channels={channels ?? []}
       filter={filter ?? null}
+      country={project.country}
+      region={project.region}
     />
   );
 }

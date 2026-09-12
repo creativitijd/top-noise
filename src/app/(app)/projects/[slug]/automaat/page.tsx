@@ -27,6 +27,8 @@ export default async function ProjectAutomaatPage({
     <AutomaatPage
       projectId={project.id}
       projectSlug={project.slug}
+      country={project.country}
+      region={project.region}
       connectedChannels={(channels ?? [])
         .filter((channel) => channel.status === "connected")
         .map((channel) => channel.platform)}

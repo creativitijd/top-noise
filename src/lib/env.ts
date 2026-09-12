@@ -15,6 +15,10 @@ export function appUrl(): string {
   return read("APP_URL") ?? read("NEXT_PUBLIC_APP_URL") ?? "http://localhost:3000";
 }
 
+export function googleOAuthConfigured(): boolean {
+  return Boolean(read("GOOGLE_CLIENT_ID") && read("GOOGLE_CLIENT_SECRET"));
+}
+
 export function supabasePublicConfig() {
   return {
     url: requiredEnv("NEXT_PUBLIC_SUPABASE_URL"),

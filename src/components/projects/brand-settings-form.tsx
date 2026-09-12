@@ -21,6 +21,9 @@ import { AudienceEditor, audiencesToSummary } from "@/components/projects/audien
 import { BrandProgress } from "@/components/projects/brand-progress";
 import { VisualFields } from "@/components/projects/visual-fields";
 import { VoiceFields } from "@/components/projects/voice-fields";
+import { GoogleDataSources } from "@/components/projects/google-data-sources";
+import { MarketPicker } from "@/components/projects/market-picker";
+import { projectMarket, type BeRegion, type MarketCountry } from "@/lib/holidays";
 import type { ContentPillar, Project } from "@/types/database";
 
 export function BrandSettingsForm({
@@ -46,6 +49,7 @@ export function BrandSettingsForm({
           visualGuidelines: project.visual_guidelines ?? "",
         })
   );
+  const market = projectMarket(project);
   const [form, setForm] = useState({
     name: project.name,
     websiteUrl: project.website_url ?? "",
@@ -55,6 +59,8 @@ export function BrandSettingsForm({
     goals: project.goals ?? "",
     visualGuidelines: project.visual_guidelines ?? "",
     timezone: project.timezone,
+    country: market.country as MarketCountry,
+    region: market.region as BeRegion | null,
   });
 
   async function runAnalysis() {
@@ -74,14 +80,15 @@ export function BrandSettingsForm({
         throw new Error(payload.error ?? "Analyse mislukt.");
       }
       const next = payload.analysis;
-      setAnalysis((current) => mergeVisualIdentity(current, next));
+      const merged = mergeVisualIdentity(analysis, next);
+      setAnalysis(merged);
       setForm((current) => ({
         ...current,
         industry: next.industry || current.industry,
         toneOfVoice: next.toneOfVoice || current.toneOfVoice,
         targetAudience: next.targetAudience || current.targetAudience,
         goals: next.goals || current.goals,
-        visualGuidelines: next.visualGuidelines || current.visualGuidelines,
+        visualGuidelines: merged.visualGuidelines || composeVisualGuidelines(merged) || current.visualGuidelines,
       }));
       toast.success("Merkanalyse bijgewerkt. Controleer en sla op.");
     } catch (error) {
@@ -204,6 +211,20 @@ export function BrandSettingsForm({
               <p className="text-sm text-[#8b8079]">Kies een bestand om de huidige styleguide te vervangen.</p>
             ) : null}
           </Field>
+          <Field label="Land en regio">
+            <MarketPicker
+              country={form.country}
+              region={form.region}
+              onChange={(next) =>
+                setForm({
+                  ...form,
+                  country: next.country,
+                  region: next.region,
+                  timezone: next.timezone,
+                })
+              }
+            />
+          </Field>
           <Field label="Tijdzone">
             <Input
               value={form.timezone}
@@ -290,6 +311,18 @@ export function BrandSettingsForm({
           </Field>
         </section>
       </div>
+      <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
+        <div>
+          <h2 className="font-[family-name:var(--font-heading)] text-[18px] font-semibold tracking-[-0.03em]">
+            Google-data
+          </h2>
+          <p className="mt-1 mb-3 text-sm text-[#635a52]">
+            Alleen-lezen koppeling voor Automaat. Geen testgebruikers: zet het Google-consent-scherm op In production,
+            anders verloopt de token na 7 dagen.
+          </p>
+          <GoogleDataSources projectId={project.id} projectSlug={project.slug} />
+        </div>
+      </section>
       <section className="flex flex-wrap items-end justify-between gap-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
         <div>
           <p className="mb-2 text-sm font-medium">Contentpijlers</p>

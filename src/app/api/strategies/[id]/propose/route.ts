@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { assertProjectAccess, getAuth } from "@/lib/auth/session";
+import { startTuneConversation } from "@/lib/automaat/conversation";
 import { proposeStrategy } from "@/lib/automaat/propose";
-import { asJson, brandContextFromProject, loadStrategy, serializeStrategy } from "@/lib/automaat/store";
+import { asJson, brandContextFromProject, loadStrategy, serializeStrategy, snapshotText } from "@/lib/automaat/store";
+import { projectMarket } from "@/lib/holidays";
 import { handleRouteError, jsonError } from "@/lib/http";
 
 export const maxDuration = 60;
@@ -15,8 +17,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     const { id } = await context.params;
     const { row, strategy } = await loadStrategy(auth.supabase, id);
     const project = await assertProjectAccess(auth.supabase, row.project_id);
-    if (!strategy.conversation.done) {
-      return jsonError("Het gesprek is nog niet klaar.");
+    if (strategy.document.pillars.length > 0) {
+      return NextResponse.json({ strategy });
     }
 
     const document = await proposeStrategy({
@@ -27,11 +29,20 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       channels: strategy.channels,
       brandContext: brandContextFromProject(project),
       conversation: strategy.conversation,
+      snapshotText: snapshotText(row.data_snapshot),
+      country: projectMarket(project).country,
+      region: projectMarket(project).region,
     });
+    const conversation = strategy.conversation.done
+      ? strategy.conversation
+      : startTuneConversation(document, strategy.level);
 
     const { data, error } = await auth.supabase
       .from("strategies")
-      .update({ document: asJson(document) })
+      .update({
+        document: asJson(document),
+        conversation: asJson(conversation),
+      })
       .eq("id", id)
       .select("*")
       .single();

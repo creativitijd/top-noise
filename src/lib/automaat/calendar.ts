@@ -11,6 +11,7 @@ import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
 import { voiceFromStored } from "@/lib/ai/voice";
 import { asPlatforms, postsPerMonth, type StrategyDocument, type StrategyLevel } from "@/lib/automaat/model";
 import { scheduledAtForDay } from "@/lib/dates";
+import { formatHolidayPrompt, holidayPlanForPeriod, projectMarket } from "@/lib/holidays";
 import type { Authed } from "@/lib/auth/session";
 import type { ContentPillar, Post, Project } from "@/types/database";
 
@@ -36,7 +37,21 @@ export async function generateStrategyCalendar(input: {
 }): Promise<{ created: number; written: number }> {
   const platforms = asPlatforms(input.channels);
   const count = postsPerMonth(input.level);
-  const dates = weekdaysFrom(input.startsOn, input.periodMonths * count);
+  const market = projectMarket(input.project);
+  const plan = input.document.season.country
+    ? {
+        closed: input.document.season.closed,
+        moments: input.document.season.moments,
+        notes: input.document.season.notes,
+      }
+    : holidayPlanForPeriod({
+        startsOn: input.startsOn,
+        periodMonths: input.periodMonths,
+        country: market.country,
+        region: market.region,
+      });
+  const closed = new Set(plan.closed.map((item) => item.date));
+  const dates = planningDates(input.startsOn, input.periodMonths * count, closed);
   const analysis = parsedBrandAnalysis(input.project.brand_analysis);
   const visualIdentity = formatVisualIdentity(analysis, input.project.visual_guidelines);
   const pillars = await syncStrategyPillars(input.supabase, input.project.id, input.document);
@@ -48,7 +63,9 @@ export async function generateStrategyCalendar(input: {
 JSON: { "posts": [{ "date": "YYYY-MM-DD", "topic": "concreet onderwerp", "pillar": "naam van pillar" }] }
 
 Gebruik alleen deze datums: ${dates.join(", ")}
-Eén post per datum. Onderwerpen volgen de pillars en maandzwaartepunten. Geen dubbele thema's achter elkaar.`,
+Eén post per datum. Onderwerpen volgen de pillars en maandzwaartepunten. Geen dubbele thema's achter elkaar.
+${formatHolidayPrompt(plan)}
+${plan.notes ? `Aanpak feestdagen: ${plan.notes}` : ""}`,
       userContent: [
         `Merk: ${input.project.name}`,
         `Kanalen: ${input.channels.join(", ")}`,
@@ -216,13 +233,16 @@ async function mapLimit<T>(items: T[], limit: number, worker: (item: T) => Promi
   await Promise.all(Array.from({ length: Math.min(limit, Math.max(items.length, 1)) }, () => run()));
 }
 
-function weekdaysFrom(startsOn: string, count: number): string[] {
+function planningDates(startsOn: string, count: number, closed: Set<string>): string[] {
   const dates: string[] = [];
   let cursor = parseISO(startsOn.slice(0, 10));
-  while (dates.length < count) {
+  let guard = 0;
+  while (dates.length < count && guard < count * 4 + 90) {
+    guard += 1;
+    const iso = format(cursor, "yyyy-MM-dd");
     const day = getDay(cursor);
-    if (day !== 0 && day !== 6) {
-      dates.push(format(cursor, "yyyy-MM-dd"));
+    if (day !== 0 && day !== 6 && !closed.has(iso)) {
+      dates.push(iso);
     }
     cursor = addDays(cursor, 1);
   }

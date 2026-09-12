@@ -23,7 +23,7 @@ Zet de waarden in `.env.local`. Voer daarna de migratie uit:
 npx supabase db push
 ```
 
-of plak [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) en daarna [`0002_brand_analysis.sql`](supabase/migrations/0002_brand_analysis.sql) in de SQL-editor.
+of plak [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), daarna [`0002_brand_analysis.sql`](supabase/migrations/0002_brand_analysis.sql), [`0003_strategies.sql`](supabase/migrations/0003_strategies.sql), [`0004_data_sources.sql`](supabase/migrations/0004_data_sources.sql) en [`0005_market.sql`](supabase/migrations/0005_market.sql) in de SQL-editor.
 
 ## Supabase API-keys
 
@@ -58,6 +58,18 @@ Bij een nieuw project kun je een website en/of styleguide (PDF/PNG/JPG) laten an
 
 Beeld in de post-editor gebruikt dezelfde `AI_API_KEY` (`AI_IMAGE_MODEL=gpt-image-1` of `gpt-image-2`). OpenAI kan organisatieverificatie vragen voor image-modellen. Gegenereerde beelden komen in de storage-bucket `post-images`.
 
+## Google Analytics en Search Console
+
+Automaat maakt eerst een draft uit de website-analyse (plus een eenmalige 90-dagen GA/GSC-snapshot als die gekoppeld is). Daarna toets je die draft met ja/nee. Koppelen kan in **Merk** of in de Automaat-setup. Scope: alleen lezen.
+
+Gebruik **geen** OAuth-consent-scherm in status Testing met testgebruikers. Die refresh tokens verlopen na 7 dagen. Zet Publishing status op **In production**. Tot Google de sensitive scopes verifieert zie je een “unverified app”-waarschuwing (max. 100 users). Tokens blijven dan wel geldig tot iemand ze intrekt.
+
+1. Google Cloud-project → APIs: **Google Analytics Data API**, **Google Analytics Admin API**, **Search Console API**.
+2. OAuth-client (Web application). Authorized redirect URIs:
+   - `http://localhost:3000/api/oauth/google/callback`
+   - `https://top-noise-h9zve.sevalla.app/api/oauth/google/callback`
+3. Env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Optioneel `GOOGLE_REDIRECT_URI` als die afwijkt.
+
 Geplande publicatie lokaal (naast `npm run dev`):
 
 ```sh
@@ -84,6 +96,9 @@ Zelfde aanpak als Wensonweb: **Application Hosting** met de `Dockerfile` in de r
    AI_API_KEY=sk-...
    AI_MODEL=gpt-4o-mini
    AI_ANALYSIS_MODEL=gpt-4o
+   GOOGLE_CLIENT_ID=
+   GOOGLE_CLIENT_SECRET=
+   GOOGLE_REDIRECT_URI=https://top-noise-h9zve.sevalla.app/api/oauth/google/callback
    ```
 
    Daarna **Deployments → Deploy now**.
@@ -97,6 +112,10 @@ Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
 - `* * * * *` → `curl -sS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/publish"`
 - `15 3 * * *` → hetzelfde voor `/api/cron/analytics` (tijdzone Europe/Brussels)
 
+## Land, regio en feestdagen
+
+Op **Merk** kies je land (en bij België de regio). Automaat gebruikt dat voor de strategie: vrije dagen krijgen geen post, commerciële momenten (Sinterklaas, Black Friday, Moederdag) wel. De kalender toont die dagen.
+
 ## Versie
 
-0.13.1
+0.16.0

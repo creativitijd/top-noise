@@ -7,10 +7,14 @@ export function AutomaatPage({
   projectId,
   projectSlug,
   connectedChannels,
+  country,
+  region,
 }: {
   projectId: string;
   projectSlug: string;
   connectedChannels: string[];
+  country?: string | null;
+  region?: string | null;
 }) {
   const router = useRouter();
 
@@ -19,6 +23,8 @@ export function AutomaatPage({
       projectId={projectId}
       projectSlug={projectSlug}
       connectedChannels={connectedChannels}
+      country={country}
+      region={region}
       open
       embedded
       onClose={() => router.push(`/projects/${projectSlug}`)}
