@@ -99,4 +99,4 @@ Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
 
 ## Versie
 
-0.13.0
+0.13.1

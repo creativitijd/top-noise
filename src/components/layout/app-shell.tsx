@@ -11,6 +11,7 @@ import {
   LogOut,
   Pencil,
   Sparkles,
+  Wand2,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { createBrowserSupabase } from "@/lib/supabase/client";
@@ -46,6 +47,13 @@ export function ProjectSidebar({
           count: null,
           match: () =>
             (pathname === base && !filter) || pathname.startsWith(`${base}/posts/`),
+        },
+        {
+          href: `${base}/automaat`,
+          label: "Automaat",
+          icon: Wand2,
+          count: null,
+          match: () => pathname.startsWith(`${base}/automaat`),
         },
         {
           href: `${base}?filter=draft`,

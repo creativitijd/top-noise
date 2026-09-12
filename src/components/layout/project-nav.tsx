@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "", label: "Kalender" },
+  { href: "/automaat", label: "Automaat" },
   { href: "/analytics", label: "Resultaten" },
   { href: "/channels", label: "Kanalen" },
   { href: "/settings", label: "Merk" },

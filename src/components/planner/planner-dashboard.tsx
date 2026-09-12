@@ -17,7 +17,6 @@ import {
 } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Search, Wand2 } from "lucide-react";
-import { AutomaatWizard } from "@/components/automaat/automaat-wizard";
 import { CreatePostDialog } from "@/components/calendar/create-post-dialog";
 import { PLATFORM_LABELS, type Platform } from "@/lib/platforms";
 import {
@@ -52,7 +51,6 @@ export function PlannerDashboard({
   const [platform, setPlatform] = useState<Platform | "all">("all");
   const [channelOpen, setChannelOpen] = useState(false);
   const [createDate, setCreateDate] = useState<string | null>(null);
-  const [automaatOpen, setAutomaatOpen] = useState(false);
 
   const connected = channels.filter((channel) => channel.status === "connected");
   const now = new Date();
@@ -186,14 +184,13 @@ export function PlannerDashboard({
                 <Plus className="size-[15px]" />
                 Nieuw bericht
               </button>
-              <button
-                type="button"
-                onClick={() => setAutomaatOpen(true)}
+              <Link
+                href={`/projects/${projectSlug}/automaat`}
                 className="inline-flex items-center gap-2 rounded-full bg-[#1f1b18] px-[18px] py-[11px] text-sm font-semibold text-white hover:bg-black"
               >
                 <Wand2 className="size-[15px]" />
                 Automaat
-              </button>
+              </Link>
               {pendingReview > 0 ? (
                 <Link
                   href={`/projects/${projectSlug}?filter=draft`}
@@ -312,14 +309,13 @@ export function PlannerDashboard({
             ) : null}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setAutomaatOpen(true)}
+            <Link
+              href={`/projects/${projectSlug}/automaat`}
               className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(31_27_24_/_14%)] px-3.5 py-1.5 text-[13px] font-medium text-[#635a52] hover:bg-[rgb(31_27_24_/_5%)]"
             >
               <Wand2 className="size-3.5" />
               Automaat
-            </button>
+            </Link>
             <button
               type="button"
               onClick={() => setCursor(new Date())}
@@ -376,13 +372,6 @@ export function PlannerDashboard({
         projectSlug={projectSlug}
         date={createDate}
         onClose={() => setCreateDate(null)}
-      />
-      <AutomaatWizard
-        projectId={projectId}
-        projectSlug={projectSlug}
-        connectedChannels={connected.map((channel) => channel.platform)}
-        open={automaatOpen}
-        onClose={() => setAutomaatOpen(false)}
       />
     </main>
   );

@@ -27,12 +27,14 @@ export function AutomaatWizard({
   connectedChannels,
   open,
   onClose,
+  embedded = false,
 }: {
   projectId: string;
   projectSlug: string;
   connectedChannels: string[];
   open: boolean;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("setup");
@@ -71,7 +73,9 @@ export function AutomaatWizard({
     if (!open) {
       return;
     }
-    window.document.body.style.overflow = "hidden";
+    if (!embedded) {
+      window.document.body.style.overflow = "hidden";
+    }
     fetch(`/api/strategies?projectId=${projectId}`)
       .then(async (response) => {
         const payload = (await response.json()) as { strategy?: StrategyRecord | null; error?: string };
@@ -84,9 +88,11 @@ export function AutomaatWizard({
         toast.error(error instanceof Error ? error.message : "Strategie laden mislukt.");
       });
     return () => {
-      window.document.body.style.overflow = "";
+      if (!embedded) {
+        window.document.body.style.overflow = "";
+      }
     };
-  }, [open, projectId]);
+  }, [embedded, open, projectId]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -234,7 +240,14 @@ export function AutomaatWizard({
     (strategy?.level ?? level) === "uitgebreid" && months.some((item) => !item.confirmed);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1f1b18]">
+    <div
+      className={cn(
+        "flex flex-col bg-[#f5f5f4] text-[#1f1b18]",
+        embedded
+          ? "min-h-[calc(100vh-44px)] overflow-hidden rounded-[24px] border border-[rgb(31_27_24_/_8%)]"
+          : "fixed inset-0 z-50"
+      )}
+    >
       <header className="flex items-center gap-3 border-b border-[rgb(31_27_24_/_8%)] px-5 py-3.5">
         <span className="flex size-9 items-center justify-center rounded-full bg-[#1f1b18] text-white">
           <Wand2 className="size-4" />
