@@ -5,6 +5,33 @@ import { handleRouteError, jsonError } from "@/lib/http";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
+export async function GET(request: Request) {
+  try {
+    const auth = await getAuth();
+    if (!auth) {
+      return jsonError("Niet ingelogd.", 401);
+    }
+    const projectId = new URL(request.url).searchParams.get("projectId") ?? "";
+    const parsed = z.string().uuid().safeParse(projectId);
+    if (!parsed.success) {
+      return jsonError("Ongeldig project.");
+    }
+    const project = await assertProjectAccess(auth.supabase, parsed.data);
+    if (!project.stylebook_path) {
+      return jsonError("Er is geen styleguide gekoppeld.", 404);
+    }
+    const { data, error } = await auth.supabase.storage
+      .from("stylebooks")
+      .createSignedUrl(project.stylebook_path, 60 * 10);
+    if (error || !data?.signedUrl) {
+      return jsonError(error?.message ?? "Link maken mislukt.", 500);
+    }
+    return NextResponse.redirect(data.signedUrl);
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const auth = await getAuth();

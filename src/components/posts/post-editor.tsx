@@ -76,6 +76,9 @@ export function PostEditor({
   const [visualBrief, setVisualBrief] = useState(post.visual_brief ?? "");
   const [editingBrief, setEditingBrief] = useState(false);
   const [imageUrl, setImageUrl] = useState(media[0]?.public_url ?? "");
+  const [proposals, setProposals] = useState<string[]>(() =>
+    [...new Set(media.map((item) => item.public_url).filter(Boolean))]
+  );
   const [showImageUrl, setShowImageUrl] = useState(false);
   const [contents, setContents] = useState<Record<string, string>>(() =>
     Object.fromEntries(targets.map((target) => [target.platform, target.content]))
@@ -138,6 +141,29 @@ export function PostEditor({
     setSavedAt(new Date().toISOString());
   }
 
+  async function generateImages() {
+    await save();
+    const response = await fetch("/api/ai/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId,
+        postId: post.id,
+        topic,
+        visualBrief,
+      }),
+    });
+    const payload = (await response.json()) as { error?: string; urls?: string[]; selected?: string };
+    if (!response.ok || !payload.urls?.length) {
+      throw new Error(payload.error ?? "Beeld genereren mislukt.");
+    }
+    setProposals(payload.urls);
+    setImageUrl(payload.selected ?? payload.urls[0] ?? "");
+    setShowImageUrl(false);
+    setDirty(false);
+    setSavedAt(new Date().toISOString());
+  }
+
   async function run(label: string, action: () => Promise<void>, success?: string) {
     setPending(label);
     try {
@@ -145,7 +171,9 @@ export function PostEditor({
       if (success) {
         toast.success(success);
       }
-      router.refresh();
+      if (label !== "image") {
+        router.refresh();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Actie mislukt.");
     } finally {
@@ -476,7 +504,7 @@ export function PostEditor({
               </span>
               <h2 className="font-[family-name:var(--font-heading)] text-[17px] font-semibold tracking-[-0.03em]">Beeld</h2>
               <span className="rounded-full bg-[#fbf1e8] px-2.5 py-1 text-[11.5px] font-semibold text-[#b8562c]">
-                Eigen beeld
+                {proposals.length > 0 ? `${proposals.length} voorstellen` : "Nog geen beeld"}
               </span>
               <span className="ml-auto flex gap-2">
                 <button
@@ -490,11 +518,11 @@ export function PostEditor({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void run("generate", generateAll, "Opnieuw gegenereerd.")}
+                  onClick={() => void run("image", generateImages, "Beeld gegenereerd.")}
                   className="inline-flex items-center gap-1.5 rounded-full bg-[#c2572c] px-3.5 py-2 text-[12.5px] font-semibold text-white hover:bg-[#a9481f] disabled:opacity-50"
                 >
-                  <RefreshCw className={cn("size-3.5", pending === "generate" && "animate-spin")} />
-                  Genereer opnieuw
+                  <RefreshCw className={cn("size-3.5", pending === "image" && "animate-spin")} />
+                  {imageUrl || proposals.length > 0 ? "Genereer opnieuw" : "Genereer beeld"}
                 </button>
               </span>
             </div>
@@ -554,18 +582,50 @@ export function PostEditor({
               />
             ) : null}
 
-            <div className="overflow-hidden rounded-2xl border-[3px] border-[#4f8637] bg-[#f5f5f4]">
-              {imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={imageUrl} alt="" className="aspect-square w-full object-cover" />
-              ) : (
-                <div className="flex aspect-[2.4/1] flex-col items-center justify-center gap-1 bg-linear-to-br from-[#fff1c2] via-[#ffd97a] to-[#f2b53c] text-center">
-                  <p className="text-sm font-semibold text-[#6b503f]">Nog geen beeld</p>
-                  <p className="text-[12.5px] text-[#8b8079]">Plak een URL via Eigen beeld. AI-beeld volgt later.</p>
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {Array.from({ length: 4 }, (_, index) => {
+                const url = proposals[index];
+                const selected = Boolean(url) && url === imageUrl;
+                return (
+                  <button
+                    key={url ?? `empty-${index}`}
+                    type="button"
+                    disabled={!url || pending === "image"}
+                    onClick={() => {
+                      if (!url) {
+                        return;
+                      }
+                      setImageUrl(url);
+                      markDirty();
+                    }}
+                    className={cn(
+                      "relative overflow-hidden rounded-2xl border-[3px] text-left",
+                      selected ? "border-[#4f8637]" : "border-transparent",
+                      url ? "cursor-pointer" : "cursor-default"
+                    )}
+                  >
+                    {url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    ) : (
+                      <span className="flex aspect-square items-center justify-center bg-linear-to-br from-[#fff1c2] via-[#ffd97a] to-[#f2b53c] px-2 text-center text-[11.5px] font-semibold text-[#6b503f]">
+                        {pending === "image" ? "Bezig…" : "Leeg"}
+                      </span>
+                    )}
+                    {selected ? (
+                      <span className="absolute top-2.5 right-2.5 flex size-6 items-center justify-center rounded-full bg-[#4f8637] text-white">
+                        <Check className="size-3.5" strokeWidth={3} />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
-            <p className="mt-3 text-[12.5px] text-[#8b8079]">Gekozen beeld wordt op alle kanalen gebruikt.</p>
+            <p className="mt-3 text-[12.5px] text-[#8b8079]">
+              {pending === "image"
+                ? "Beelden maken duurt even. Gekozen beeld wordt op alle kanalen gebruikt."
+                : "Gekozen beeld wordt op alle kanalen gebruikt."}
+            </p>
           </section>
 
           <section className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-[22px]">

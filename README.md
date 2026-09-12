@@ -56,6 +56,8 @@ npm run dev
 
 Bij een nieuw project kun je een website en/of styleguide (PDF/PNG/JPG) laten analyseren. Daarvoor is `AI_API_KEY` nodig, bij voorkeur met `AI_ANALYSIS_MODEL=gpt-4o`. De analyse vult toon, visuele regels, pijlers en een doelgroepbepaling (primair + secundair); jij keurt ze daarna goed.
 
+Beeld in de post-editor gebruikt dezelfde `AI_API_KEY` (`AI_IMAGE_MODEL=gpt-image-1` of `gpt-image-2`). OpenAI kan organisatieverificatie vragen voor image-modellen. Gegenereerde beelden komen in de storage-bucket `post-images`.
+
 Geplande publicatie lokaal (naast `npm run dev`):
 
 ```sh
@@ -97,4 +99,4 @@ Geplande posts op Sevalla: twee **Cron jobs** (niet `npm run worker`):
 
 ## Versie
 
-0.8.1
+0.9.1

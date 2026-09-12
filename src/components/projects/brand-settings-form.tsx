@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { FileImage, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,15 +143,39 @@ export function BrandSettingsForm({
             />
           </Field>
           <Field label="Styleguide">
+            {project.stylebook_path ? (
+              <a
+                href={`/api/projects/stylebook?projectId=${project.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 rounded-2xl border border-[rgb(31_27_24_/_10%)] bg-[#fafaf9] px-3.5 py-3 hover:border-[#4f8637]"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-[#fbf1e8] text-[#b8562c]">
+                  {stylebookKind(project.stylebook_path) === "pdf" ? (
+                    <FileText className="size-5" />
+                  ) : (
+                    <FileImage className="size-5" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-[#1f1b18]">
+                    {stylebookFileName(project.stylebook_path)}
+                  </span>
+                  <span className="text-[12.5px] font-medium text-[#3f6b2b]">Openen</span>
+                </span>
+              </a>
+            ) : null}
             <Input
               type="file"
               accept=".pdf,image/png,image/jpeg,image/webp"
               onChange={(event) => setStylebook(event.target.files?.[0] ?? null)}
             />
-            {project.stylebook_path ? (
-              <p className="text-sm text-muted-foreground">
-                Er is al een styleguide gekoppeld{stylebook ? "; je upload vervangt die." : "."}
+            {stylebook ? (
+              <p className="text-sm text-[#635a52]">
+                {stylebook.name} vervangt het huidige bestand bij opslaan.
               </p>
+            ) : project.stylebook_path ? (
+              <p className="text-sm text-[#8b8079]">Kies een bestand om de huidige styleguide te vervangen.</p>
             ) : null}
           </Field>
           <Field label="Tijdzone">
@@ -260,6 +285,17 @@ export function BrandSettingsForm({
       </section>
     </div>
   );
+}
+
+function stylebookKind(path: string): "pdf" | "image" {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  return ["png", "jpg", "jpeg", "webp"].includes(ext) ? "image" : "pdf";
+}
+
+function stylebookFileName(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "pdf";
+  const safe = ext === "jpeg" ? "jpg" : ext;
+  return `Styleguide.${safe}`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
