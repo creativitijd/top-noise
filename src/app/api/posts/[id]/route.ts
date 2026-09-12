@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuth } from "@/lib/auth/session";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
-import { isPlatform } from "@/lib/platforms";
+import { isPlatform, type Platform } from "@/lib/platforms";
 
 const updateSchema = z.object({
   topic: z.string().optional(),
@@ -11,6 +11,7 @@ const updateSchema = z.object({
   visualBrief: z.string().optional(),
   scheduledAt: z.string().optional(),
   imageUrl: z.string().url().optional().nullable(),
+  addPlatforms: z.array(z.string()).optional(),
   targets: z
     .array(
       z.object({
@@ -33,20 +34,40 @@ export async function PATCH(request: Request, context: RouteContext) {
     const { id } = await context.params;
     const body = await readJson(request, updateSchema);
 
-    const { data: post, error } = await auth.supabase
-      .from("posts")
-      .update({
-        topic: body.topic,
-        title: body.title,
-        explanation: body.explanation,
-        visual_brief: body.visualBrief,
-        scheduled_at: body.scheduledAt,
-      })
-      .eq("id", id)
-      .select("*")
-      .single();
+    const patch = {
+      topic: body.topic,
+      title: body.title,
+      explanation: body.explanation,
+      visual_brief: body.visualBrief,
+      scheduled_at: body.scheduledAt,
+    };
+    const shouldUpdatePost = Object.values(patch).some((value) => value !== undefined);
+
+    const { data: post, error } = shouldUpdatePost
+      ? await auth.supabase.from("posts").update(patch).eq("id", id).select("*").single()
+      : await auth.supabase.from("posts").select("*").eq("id", id).single();
     if (error || !post) {
       return jsonError(error?.message ?? "Bericht niet gevonden.", 404);
+    }
+
+    if (body.addPlatforms) {
+      const { data: existing } = await auth.supabase.from("post_targets").select("platform").eq("post_id", id);
+      const have = new Set((existing ?? []).map((row) => row.platform));
+      const rows = body.addPlatforms
+        .filter((platform): platform is Platform => isPlatform(platform) && !have.has(platform))
+        .map((platform) => ({
+          post_id: id,
+          platform,
+          content: "",
+          hashtags: [] as string[],
+          status: "draft" as const,
+        }));
+      if (rows.length > 0) {
+        const { error: insertError } = await auth.supabase.from("post_targets").insert(rows);
+        if (insertError) {
+          return jsonError(insertError.message, 400);
+        }
+      }
     }
 
     if (body.targets) {

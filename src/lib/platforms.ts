@@ -58,3 +58,10 @@ export const PLATFORM_CHAR_LIMITS: Record<Platform, number> = {
 
 export const PLATFORM_ORDER: Platform[] = ["linkedin", "instagram", "facebook", "wordpress"];
 
+export const PLATFORM_RATIO_LABELS: Record<Platform, string> = {
+  linkedin: "Liggend 1.91:1",
+  instagram: "Vierkant 1:1",
+  facebook: "Liggend 1.91:1",
+  wordpress: "Artikel",
+};
+

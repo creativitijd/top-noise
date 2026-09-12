@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { BrandAnalysis } from "@/lib/ai/brand-analysis";
 import { AudienceEditor, audiencesToSummary } from "@/components/projects/audience-editor";
+import { VisualFields } from "@/components/projects/visual-fields";
 import { VoiceFields } from "@/components/projects/voice-fields";
 
 const defaultPillars = [
@@ -186,6 +187,17 @@ export function ProjectOnboardingForm() {
               onChange={(patch) => setAnalysis((current) => (current ? { ...current, ...patch } : current))}
             />
           ) : null}
+          {analysis ? (
+            <VisualFields
+              analysis={analysis}
+              onChange={(patch) => {
+                setAnalysis((current) => (current ? { ...current, ...patch } : current));
+                if (typeof patch.visualGuidelines === "string") {
+                  setVisualGuidelines(patch.visualGuidelines);
+                }
+              }}
+            />
+          ) : null}
           <Field label="Doelgroep (samenvatting)">
             <Textarea
               value={targetAudience}
@@ -195,7 +207,7 @@ export function ProjectOnboardingForm() {
           <Field label="Doelen">
             <Textarea value={goals} onChange={(event) => setGoals(event.target.value)} />
           </Field>
-          <Field label="Visuele richtlijnen">
+          <Field label="Samenvatting visuele richtlijnen">
             <Textarea
               value={visualGuidelines}
               onChange={(event) => setVisualGuidelines(event.target.value)}

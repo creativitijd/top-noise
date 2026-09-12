@@ -24,6 +24,7 @@ export function buildSystemPrompt(input: {
   targetAudience?: string | null;
   goals?: string | null;
   visualGuidelines?: string | null;
+  visualIdentity?: string | null;
   brandAnalysis?: string | null;
   pillars: { name: string; description: string | null }[];
   voice: VoiceProfile;
@@ -38,7 +39,8 @@ export function buildSystemPrompt(input: {
     input.industry ? `Branche: ${input.industry}` : null,
     input.targetAudience ? `Doelgroep: ${input.targetAudience}` : null,
     input.goals ? `Doelen: ${input.goals}` : null,
-    input.visualGuidelines ? `Visuele richtlijnen: ${input.visualGuidelines}` : null,
+    input.visualIdentity ? `Visuele identiteit (verplicht gebruiken in visualBrief en bij blogbeeld):\n${input.visualIdentity}` : null,
+    input.visualGuidelines && !input.visualIdentity ? `Visuele richtlijnen: ${input.visualGuidelines}` : null,
     input.brandAnalysis ? `Merkanalyse:\n${input.brandAnalysis}` : null,
     `Contentpijlers: ${pillars}`,
   ]
@@ -84,8 +86,9 @@ LINKEDIN:
 - Eindig met een vraag of reflectie als dat bij het merk past
 
 WORDPRESS:
-- 500-800 woorden
+- 500-800 woorden, als blogartikel
 - Intro die pakt, H2-subkoppen, persoonlijk voorbeeld, takeaway
+- Featured image volgt de visuele identiteit: noem in visualBrief de hoofdkleuren (hex), steunkleuren en beeldstijl. Geen andere paletten verzinnen.
 
 === OUTPUT FORMAAT ===
 
@@ -93,7 +96,7 @@ Antwoord uitsluitend als JSON-object:
 {
   "title": "Interne titel",
   "explanation": "Waarom dit onderwerp past bij het merk",
-  "visualBrief": "Type, stijl, compositie, sfeer, kleuren",
+  "visualBrief": "Beeld voor social én blog. Noem verplicht de merkkleuren in hex, de beeldstijl en wat je vermijdt",
   "platforms": {
     "facebook": "...",
     "instagram": "...",
@@ -116,7 +119,8 @@ export function buildUserPrompt(input: {
 Onderwerp: ${input.topic}
 Geplande datum: ${input.scheduledAt}
 
-Schrijf in het Nederlands, in de merkstem hierboven. Klinkt het als ChatGPT, dan is het fout.`;
+Schrijf in het Nederlands, in de merkstem hierboven. Klinkt het als ChatGPT, dan is het fout.
+visualBrief moet de merkkleuren (hex) en beeldstijl uit de visuele identiteit gebruiken.`;
 }
 
 export function buildRewriteSystemPrompt(input: {

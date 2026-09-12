@@ -32,12 +32,22 @@ export default async function ProjectLayout({
   const storedAnalysis = project.brand_analysis;
   const analysisRecord =
     storedAnalysis && typeof storedAnalysis === "object" && !Array.isArray(storedAnalysis)
-      ? (storedAnalysis as { audiences?: unknown; writingSamples?: unknown })
+      ? (storedAnalysis as {
+          audiences?: unknown;
+          writingSamples?: unknown;
+          primaryColors?: unknown;
+          supportingColors?: unknown;
+          colorPalette?: unknown;
+        })
       : null;
   const audienceCount = Array.isArray(analysisRecord?.audiences) ? analysisRecord.audiences.length : 0;
   const writingSampleCount = Array.isArray(analysisRecord?.writingSamples)
     ? analysisRecord.writingSamples.filter((sample) => typeof sample === "string" && sample.trim().length >= 24).length
     : 0;
+  const colorCount =
+    (Array.isArray(analysisRecord?.primaryColors) ? analysisRecord.primaryColors.length : 0) +
+    (Array.isArray(analysisRecord?.supportingColors) ? analysisRecord.supportingColors.length : 0) +
+    (Array.isArray(analysisRecord?.colorPalette) ? analysisRecord.colorPalette.length : 0);
 
   const brand = brandProgress({
     name: project.name,
@@ -50,6 +60,7 @@ export default async function ProjectLayout({
     stylebookPath: project.stylebook_path,
     audienceCount,
     writingSampleCount,
+    colorCount,
     pillarCount: (pillars ?? []).length,
   });
 

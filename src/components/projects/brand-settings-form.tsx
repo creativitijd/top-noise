@@ -8,10 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { brandAnalysisSchema, type BrandAnalysis } from "@/lib/ai/brand-analysis";
+import {
+  brandAnalysisSchema,
+  composeVisualGuidelines,
+  emptyBrandAnalysis,
+  ensureVisualIdentity,
+  mergeVisualIdentity,
+  type BrandAnalysis,
+} from "@/lib/ai/brand-analysis";
 import { brandProgress } from "@/lib/brand/completeness";
 import { AudienceEditor, audiencesToSummary } from "@/components/projects/audience-editor";
 import { BrandProgress } from "@/components/projects/brand-progress";
+import { VisualFields } from "@/components/projects/visual-fields";
 import { VoiceFields } from "@/components/projects/voice-fields";
 import type { ContentPillar, Project } from "@/types/database";
 
@@ -27,7 +35,17 @@ export function BrandSettingsForm({
   const [analyzing, setAnalyzing] = useState(false);
   const [stylebook, setStylebook] = useState<File | null>(null);
   const stored = brandAnalysisSchema.safeParse(project.brand_analysis);
-  const [analysis, setAnalysis] = useState<BrandAnalysis | null>(stored.success ? stored.data : null);
+  const [analysis, setAnalysis] = useState<BrandAnalysis>(() =>
+    stored.success
+      ? ensureVisualIdentity(stored.data)
+      : emptyBrandAnalysis({
+          industry: project.industry ?? "",
+          toneOfVoice: project.tone_of_voice ?? "",
+          targetAudience: project.target_audience ?? "",
+          goals: project.goals ?? "",
+          visualGuidelines: project.visual_guidelines ?? "",
+        })
+  );
   const [form, setForm] = useState({
     name: project.name,
     websiteUrl: project.website_url ?? "",
@@ -46,6 +64,7 @@ export function BrandSettingsForm({
       data.set("name", form.name);
       data.set("industry", form.industry);
       data.set("websiteUrl", form.websiteUrl);
+      data.set("projectId", project.id);
       if (stylebook) {
         data.set("stylebook", stylebook);
       }
@@ -54,14 +73,15 @@ export function BrandSettingsForm({
       if (!response.ok || !payload.analysis) {
         throw new Error(payload.error ?? "Analyse mislukt.");
       }
-      setAnalysis(payload.analysis);
+      const next = payload.analysis;
+      setAnalysis((current) => mergeVisualIdentity(current, next));
       setForm((current) => ({
         ...current,
-        industry: payload.analysis?.industry ?? current.industry,
-        toneOfVoice: payload.analysis?.toneOfVoice ?? current.toneOfVoice,
-        targetAudience: payload.analysis?.targetAudience ?? current.targetAudience,
-        goals: payload.analysis?.goals ?? current.goals,
-        visualGuidelines: payload.analysis?.visualGuidelines ?? current.visualGuidelines,
+        industry: next.industry || current.industry,
+        toneOfVoice: next.toneOfVoice || current.toneOfVoice,
+        targetAudience: next.targetAudience || current.targetAudience,
+        goals: next.goals || current.goals,
+        visualGuidelines: next.visualGuidelines || current.visualGuidelines,
       }));
       toast.success("Merkanalyse bijgewerkt. Controleer en sla op.");
     } catch (error) {
@@ -77,7 +97,12 @@ export function BrandSettingsForm({
       const response = await fetch("/api/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: project.id, ...form, brandAnalysis: analysis ?? undefined }),
+        body: JSON.stringify({
+          id: project.id,
+          ...form,
+          visualGuidelines: form.visualGuidelines.trim() || composeVisualGuidelines(analysis),
+          brandAnalysis: analysis,
+        }),
       });
       const payload = (await response.json()) as { error?: string; warning?: string };
       if (!response.ok) {
@@ -116,8 +141,9 @@ export function BrandSettingsForm({
     visualGuidelines: form.visualGuidelines,
     stylebookPath: project.stylebook_path,
     hasStylebookFile: Boolean(stylebook),
-    audienceCount: analysis?.audiences.length ?? 0,
-    writingSampleCount: analysis?.writingSamples.filter((sample) => sample.trim().length >= 24).length ?? 0,
+    audienceCount: analysis.audiences.length,
+    writingSampleCount: analysis.writingSamples.filter((sample) => sample.trim().length >= 24).length,
+    colorCount: analysis.primaryColors.length + analysis.supportingColors.length,
     pillarCount: pillars.length,
   });
 
@@ -189,7 +215,7 @@ export function BrandSettingsForm({
           </Button>
         </section>
         <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
-          {analysis ? (
+      {analysis.summary.trim() ? (
             <div className="rounded-xl bg-muted/60 p-4 text-sm">
               <p className="font-medium">Laatste analyse</p>
               <p className="mt-1 text-muted-foreground">{analysis.summary}</p>
@@ -202,7 +228,7 @@ export function BrandSettingsForm({
               onChange={(event) => {
                 const toneOfVoice = event.target.value;
                 setForm({ ...form, toneOfVoice });
-                setAnalysis((current) => (current ? { ...current, toneOfVoice } : current));
+                setAnalysis((current) => ({ ...current, toneOfVoice }));
               }}
             />
           </Field>
@@ -215,37 +241,35 @@ export function BrandSettingsForm({
           </Field>
         </section>
       </div>
-      {analysis ? (
+      {analysis.writingSamples.some((sample) => sample.trim().length >= 24) ? (
         <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
-          <VoiceFields
-            analysis={analysis}
-            onChange={(patch) => setAnalysis((current) => (current ? { ...current, ...patch } : current))}
-          />
+          <VoiceFields analysis={analysis} onChange={(patch) => setAnalysis((current) => ({ ...current, ...patch }))} />
         </section>
       ) : (
         <section className="rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5 text-sm text-[#635a52]">
           Analyseer de website om voorbeeldzinnen te halen. Zonder die stem klinken posts snel als AI.
         </section>
       )}
-      {analysis ? (
-        <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
-          <AudienceEditor
-            audiences={analysis.audiences}
-            onChange={(audiences) => {
-              setAnalysis((current) => (current ? { ...current, audiences } : current));
-              setForm((current) => ({
-                ...current,
-                targetAudience: audiencesToSummary(audiences, current.targetAudience),
-              }));
-            }}
-          />
-          {analysis.audiences.length === 0 ? (
-            <p className="text-sm text-[#635a52]">
-              Deze analyse heeft nog geen uitgewerkte doelgroepen. Klik op Opnieuw analyseren voor een doelgroepbepaling.
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+      <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
+        <VisualFields analysis={analysis} onChange={(patch) => setAnalysis((current) => ({ ...current, ...patch }))} />
+      </section>
+      <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
+        <AudienceEditor
+          audiences={analysis.audiences}
+          onChange={(audiences) => {
+            setAnalysis((current) => ({ ...current, audiences }));
+            setForm((current) => ({
+              ...current,
+              targetAudience: audiencesToSummary(audiences, current.targetAudience),
+            }));
+          }}
+        />
+        {analysis.audiences.length === 0 ? (
+          <p className="text-sm text-[#635a52]">
+            Nog geen uitgewerkte doelgroepen. Klik op Opnieuw analyseren, of vul ze later aan.
+          </p>
+        ) : null}
+      </section>
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
           <Field label="Doelen">
@@ -257,7 +281,7 @@ export function BrandSettingsForm({
           </Field>
         </section>
         <section className="space-y-4 rounded-[22px] border border-[rgb(31_27_24_/_8%)] bg-white p-5">
-          <Field label="Visuele richtlijnen">
+          <Field label="Samenvatting visuele richtlijnen">
             <Textarea
               className="min-h-32"
               value={form.visualGuidelines}

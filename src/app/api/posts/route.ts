@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { parsedBrandAnalysis, withBrandVisualBrief } from "@/lib/ai/brand-analysis";
 import { getAuth, assertProjectAccess } from "@/lib/auth/session";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { isPlatform } from "@/lib/platforms";
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
         project_id: project.id,
         pillar_id: body.pillarId ?? null,
         topic: body.topic,
+        visual_brief: withBrandVisualBrief(
+          body.topic,
+          "",
+          parsedBrandAnalysis(project.brand_analysis),
+          project.visual_guidelines
+        ),
         scheduled_at: scheduledAt,
         timezone: project.timezone,
         status: "draft",

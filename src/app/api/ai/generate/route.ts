@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuth, assertProjectAccess } from "@/lib/auth/session";
 import { generateJsonContent } from "@/lib/ai/generate";
-import { formatStoredAnalysis } from "@/lib/ai/brand-analysis";
+import {
+  formatStoredAnalysis,
+  formatVisualIdentity,
+  parsedBrandAnalysis,
+  withBrandVisualBrief,
+} from "@/lib/ai/brand-analysis";
+import { generateAndAttachPostImages } from "@/lib/ai/image";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
 import { voiceFromStored } from "@/lib/ai/voice";
 import { handleRouteError, jsonError, readJson } from "@/lib/http";
 import { isPlatform, type Platform } from "@/lib/platforms";
 import { scheduledAtForDay } from "@/lib/dates";
+
+export const maxDuration = 120;
 
 const schema = z.object({
   projectId: z.string().uuid(),
@@ -31,6 +39,8 @@ export async function POST(request: Request) {
     }
 
     const project = await assertProjectAccess(auth.supabase, body.projectId);
+    const analysis = parsedBrandAnalysis(project.brand_analysis);
+    const visualIdentity = formatVisualIdentity(analysis, project.visual_guidelines);
     const { data: pillars } = await auth.supabase
       .from("content_pillars")
       .select("*")
@@ -44,6 +54,7 @@ export async function POST(request: Request) {
         targetAudience: project.target_audience,
         goals: project.goals,
         visualGuidelines: project.visual_guidelines,
+        visualIdentity,
         brandAnalysis: formatStoredAnalysis(project.brand_analysis),
         pillars: pillars ?? [],
         voice: voiceFromStored(project.brand_analysis, project.tone_of_voice),
@@ -54,6 +65,12 @@ export async function POST(request: Request) {
         scheduledAt: body.date ?? new Date().toISOString(),
       }),
     });
+    generated.visualBrief = withBrandVisualBrief(
+      body.topic,
+      generated.visualBrief,
+      analysis,
+      project.visual_guidelines
+    );
 
     let postId = body.postId;
     if (!postId) {
@@ -135,6 +152,24 @@ export async function POST(request: Request) {
             hashtags: generated.hashtags,
             status: "draft",
           });
+        }
+      }
+    }
+
+    if (platforms.includes("wordpress") && postId) {
+      const { data: media } = await auth.supabase.from("media").select("id").eq("post_id", postId).limit(1);
+      if (!media?.length) {
+        try {
+          await generateAndAttachPostImages({
+            supabase: auth.supabase,
+            project,
+            postId,
+            topic: body.topic,
+            visualBrief: generated.visualBrief,
+            count: 1,
+          });
+        } catch {
+          // Tekst mag slagen als beeldgeneratie nog niet beschikbaar is.
         }
       }
     }

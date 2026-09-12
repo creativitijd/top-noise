@@ -1,4 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  brandColorsFromAnalysis,
+  formatVisualIdentity,
+  parsedBrandAnalysis,
+} from "@/lib/ai/brand-analysis";
 import { requiredEnv } from "@/lib/env";
+import type { Database, Project } from "@/types/database";
 
 const ANGLES = [
   "Wide, airy crop with clear focal point and breathing room.",
@@ -26,6 +33,7 @@ export function buildImagePrompt(input: {
     input.visualBrief ? `Visual brief: ${input.visualBrief}` : null,
     input.visualGuidelines ? `Brand visual guidelines: ${input.visualGuidelines}` : null,
     colors,
+    "Use the listed brand colors as the dominant palette. Supporting colors may appear as accents only.",
     input.angle,
     "Photorealistic unless the brief asks otherwise. Natural lighting, no collage, no mockup UI.",
     "No text, letters, watermarks, captions, logos or brand names in the image.",
@@ -187,4 +195,64 @@ function friendlyImageError(status: number, detail: string): string {
   return parsed?.error?.message
     ? `Beeldgeneratie mislukt: ${parsed.error.message}`
     : `Beeldgeneratie mislukt (${status}).`;
+}
+
+export async function generateAndAttachPostImages(input: {
+  supabase: SupabaseClient<Database>;
+  project: Pick<Project, "id" | "organization_id" | "name" | "visual_guidelines" | "brand_analysis">;
+  postId: string;
+  topic: string;
+  visualBrief: string;
+  count?: number;
+}): Promise<{ urls: string[]; selected: string }> {
+  const analysis = parsedBrandAnalysis(input.project.brand_analysis);
+  const brandColors = analysis ? brandColorsFromAnalysis(analysis) : [];
+  const visualGuidelines = formatVisualIdentity(analysis, input.project.visual_guidelines);
+  const count = input.count ?? 4;
+  const visualBrief = input.visualBrief.trim() || input.topic;
+
+  const prompt = buildImagePrompt({
+    topic: input.topic,
+    visualBrief,
+    projectName: input.project.name,
+    visualGuidelines,
+    brandColors,
+  });
+
+  const images = await generateImagePngs(prompt, count);
+  const urls: string[] = [];
+  const paths: string[] = [];
+
+  for (const image of images) {
+    const path = `${input.project.organization_id}/${input.project.id}/${input.postId}/${crypto.randomUUID()}.png`;
+    const { error: uploadError } = await input.supabase.storage
+      .from("post-images")
+      .upload(path, new Blob([new Uint8Array(image)], { type: "image/png" }), {
+        contentType: "image/png",
+        upsert: false,
+      });
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+    const { data } = input.supabase.storage.from("post-images").getPublicUrl(path);
+    urls.push(data.publicUrl);
+    paths.push(path);
+  }
+
+  const { data: existing } = await input.supabase.from("media").select("storage_path").eq("post_id", input.postId);
+  const stale = (existing ?? []).map((item) => item.storage_path).filter((path): path is string => Boolean(path));
+  if (stale.length > 0) {
+    await input.supabase.storage.from("post-images").remove(stale);
+  }
+  await input.supabase.from("media").delete().eq("post_id", input.postId).is("platform", null);
+  await input.supabase.from("media").insert({
+    project_id: input.project.id,
+    post_id: input.postId,
+    public_url: urls[0],
+    storage_path: paths[0],
+  });
+
+  await input.supabase.from("posts").update({ visual_brief: visualBrief }).eq("id", input.postId);
+
+  return { urls, selected: urls[0] ?? "" };
 }

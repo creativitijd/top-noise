@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAuth } from "@/lib/auth/session";
+import { getAuth, assertProjectAccess } from "@/lib/auth/session";
 import { analyzeBrand } from "@/lib/ai/brand-analysis";
-import { parseStylebook } from "@/lib/brand/stylebook";
+import { extractHexFromText, uniqueHexes } from "@/lib/brand/colors";
+import { parseStylebook, typeFromStylebookPath } from "@/lib/brand/stylebook";
 import { fetchWebsiteContext } from "@/lib/brand/website";
 import { handleRouteError, jsonError } from "@/lib/http";
 
@@ -18,19 +19,38 @@ export async function POST(request: Request) {
     const name = String(form.get("name") ?? "").trim();
     const industry = String(form.get("industry") ?? "").trim();
     const websiteUrl = String(form.get("websiteUrl") ?? "").trim();
-    const file = form.get("stylebook");
+    const projectId = String(form.get("projectId") ?? "").trim();
+    const uploaded = form.get("stylebook");
 
     if (name.length < 2) {
       return jsonError("Vul eerst de merknaam in.");
     }
-    if (!websiteUrl && !(file instanceof File && file.size > 0)) {
+
+    let file = uploaded instanceof File && uploaded.size > 0 ? uploaded : null;
+    if (!file && projectId) {
+      const project = await assertProjectAccess(auth.supabase, projectId);
+      if (project.stylebook_path) {
+        const { data } = await auth.supabase.storage.from("stylebooks").download(project.stylebook_path);
+        if (data) {
+          const filename = project.stylebook_path.split("/").pop() ?? "stylebook";
+          file = new File([data], filename, { type: data.type || typeFromStylebookPath(filename) });
+        }
+      }
+    }
+
+    if (!websiteUrl && !file) {
       return jsonError("Voeg een website of een styleguide toe voor de analyse.");
     }
 
     let websiteContext: string | undefined;
+    const observedColors: string[] = [];
+    const observedFonts: string[] = [];
     if (websiteUrl) {
       try {
-        websiteContext = await fetchWebsiteContext(websiteUrl);
+        const website = await fetchWebsiteContext(websiteUrl);
+        websiteContext = website.text;
+        observedColors.push(...website.colors);
+        observedFonts.push(...website.fonts);
       } catch (error) {
         websiteContext = `Website ${websiteUrl} kon niet worden gelezen (${
           error instanceof Error ? error.message : "onbekende fout"
@@ -40,10 +60,11 @@ export async function POST(request: Request) {
 
     let stylebookText: string | undefined;
     let images = undefined;
-    if (file instanceof File && file.size > 0) {
+    if (file) {
       const parsed = await parseStylebook(file);
       stylebookText = parsed.text;
       images = parsed.images;
+      observedColors.push(...extractHexFromText(parsed.text));
     }
 
     const analysis = await analyzeBrand({
@@ -52,6 +73,8 @@ export async function POST(request: Request) {
       websiteContext,
       stylebookText,
       images,
+      observedColors: uniqueHexes(observedColors, 12),
+      observedFonts,
     });
 
     return NextResponse.json({ analysis });

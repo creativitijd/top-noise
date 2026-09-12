@@ -37,6 +37,10 @@ export async function parseStylebook(file: File): Promise<StylebookInput> {
   throw new Error("Upload een PDF, PNG, JPG of WebP.");
 }
 
+export function typeFromStylebookPath(path: string): string {
+  return guessType(path);
+}
+
 function guessType(name: string): string {
   const lower = name.toLowerCase();
   if (lower.endsWith(".pdf")) {

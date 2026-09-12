@@ -16,6 +16,7 @@ export type BrandProfileInput = {
   hasStylebookFile?: boolean;
   audienceCount?: number;
   writingSampleCount?: number;
+  colorCount?: number;
   pillarCount: number;
 };
 
@@ -33,7 +34,7 @@ export function brandChecklist(input: BrandProfileInput): BrandChecklistItem[] {
     { id: "voice", label: "Schrijfstem", done: (input.writingSampleCount ?? 0) >= 3 },
     { id: "audience", label: "Doelgroep", done: filled(input.targetAudience, 16) || (input.audienceCount ?? 0) > 0 },
     { id: "goals", label: "Doelen", done: filled(input.goals, 12) },
-    { id: "visual", label: "Visuele richtlijnen", done: filled(input.visualGuidelines, 12) },
+    { id: "visual", label: "Visuele aandachtspunten", done: filled(input.visualGuidelines, 12) || (input.colorCount ?? 0) >= 1 },
     { id: "pillars", label: "Contentpijlers", done: input.pillarCount >= 3 },
   ];
 }

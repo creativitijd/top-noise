@@ -81,10 +81,28 @@ export type Channel = {
 
 export type ChannelPublic = Omit<Channel, "access_token" | "refresh_token">;
 
+export type StrategyStatus = "draft" | "active" | "archived";
+
+export type Strategy = {
+  id: string;
+  project_id: string;
+  status: StrategyStatus;
+  level: "eenvoudig" | "normaal" | "uitgebreid";
+  period_months: 3 | 6 | 9;
+  channels: string[];
+  starts_on: string;
+  conversation: Json;
+  document: Json;
+  data_snapshot: Json | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Post = {
   id: string;
   project_id: string;
   pillar_id: string | null;
+  strategy_id?: string | null;
   topic: string;
   title: string | null;
   explanation: string | null;
@@ -167,6 +185,10 @@ export type Database = {
         Pick<ContentPillar, "project_id" | "name"> & Partial<ContentPillar>
       >;
       channels: Table<Channel, Pick<Channel, "project_id" | "platform"> & Partial<Channel>>;
+      strategies: Table<
+        Strategy,
+        Pick<Strategy, "project_id" | "level" | "period_months" | "starts_on"> & Partial<Strategy>
+      >;
       posts: Table<Post, Pick<Post, "project_id" | "topic" | "scheduled_at"> & Partial<Post>>;
       post_targets: Table<
         PostTarget,
